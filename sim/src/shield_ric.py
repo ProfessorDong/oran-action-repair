@@ -309,7 +309,7 @@ def twin_predict(o: Observation, a: Action) -> tuple[float, float, float]:
     # r_max = 1.  Power minimization is handled by phi_rf, not by the
     # reward, so the argmax over candidates does not include a power
     # penalty.
-    pred_reward = pred_pdr
+    pred_reward = pred_pdr  # twin's PDR-only estimate, before noise + clipping
     # Twin estimates violation probability ONLY from observable action features.
     # Coarse rule: high power or unusual waveform/route combinations carry risk
     # weight; the twin does not see the planner's hidden "poison" marker.
@@ -326,6 +326,9 @@ def twin_predict(o: Observation, a: Action) -> tuple[float, float, float]:
         v += 0.5
     v = float(min(v, 0.99))
     pred_reward += np.random.default_rng().normal(0, o.twin_uncertainty)
+    # Clip to the [0, 1] PDR range so hat_r and bar_r live on the same
+    # scale; this also makes the empirical twin error bounded.
+    pred_reward = float(np.clip(pred_reward, 0.0, 1.0))
     disruption = 0.0 if pred_pdr > 0.9 else (0.9 - pred_pdr)
     return pred_reward, v, disruption
 

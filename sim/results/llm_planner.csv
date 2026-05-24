@@ -1,7 +1,7 @@
 scenario,seed,cycles,mean_pdr,violation_rate,cov_K_mean,regret_per_cycle,rollback_rate,n_malformed_outputs,n_llm_calls,mean_call_seconds,model_id
-narrowband,0,80,0.6562932008292046,0.0,0.0,0.6459567963074364,0.0125,1,80,5.8109256118536,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
-narrowband,1,80,0.7355748273353958,0.0,0.0,0.5809251700671231,0.05,0,80,5.762762039899826,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
-wideband,0,80,0.5589363391152717,0.0,0.0,0.760215826581471,0.05,1,80,5.801581826806069,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
-wideband,1,80,0.5913588511528995,0.0,0.0,0.716804199382638,0.0375,0,80,5.781698063015938,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
-compromised_xapp,0,80,0.7608509002492838,0.0,0.0,0.5501490977071312,0.0125,1,80,5.826067227125168,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
-compromised_xapp,1,80,0.7633888847396385,0.0,0.0,0.5533611134220141,0.025,1,80,5.796725544333458,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
+narrowband,0,80,0.7955849325946431,0.0,0.0,0.5211650645419978,0.0125,2,80,5.819782549142838,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
+narrowband,1,80,0.6863235627278389,0.0,0.0,0.6024264346746799,0.025,1,80,5.85438759624958,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
+wideband,0,80,0.6542132526728726,0.0,0.0,0.6444389130238701,0.025,2,80,5.797690513730049,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
+wideband,1,80,0.6132943099480442,0.0,0.0,0.6993687405874933,0.0125,0,80,5.838970673084259,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
+compromised_xapp,0,80,0.8201782851948,0.0,0.0,0.471571712761615,0.0,1,80,5.738403752446175,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct
+compromised_xapp,1,80,0.8843763886859046,0.0,0.0,0.418873609475748,0.0125,1,80,5.83692883849144,/home/dong/Workspace/WritePaper/2026MILCOM/Paper1_SHIELD_RIC/sim/models/Qwen2.5-1.5B-Instruct

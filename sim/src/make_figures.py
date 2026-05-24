@@ -157,7 +157,7 @@ def fig_perception(out_name: str = "fig_perception_confusion"):
     cm = np.array(d["confusion_counts"], dtype=float)
     classes = d["classes"]
     cm_norm = cm / cm.sum(axis=1, keepdims=True)
-    fig, ax = plt.subplots(figsize=(3.4, 2.6))
+    fig, ax = plt.subplots(figsize=(2.6, 2.0))
     im = ax.imshow(cm_norm, cmap="viridis", vmin=0, vmax=1)
     ax.set_xticks(range(len(classes)))
     ax.set_yticks(range(len(classes)))
@@ -183,7 +183,7 @@ def fig_perception(out_name: str = "fig_perception_confusion"):
 # ---------------------------------------------------------------------------
 
 def fig_pdr_vs_violations(df: pd.DataFrame, out_name: str = "fig_pdr_vs_violations"):
-    fig, ax = plt.subplots(figsize=(3.4, 2.7))
+    fig, ax = plt.subplots(figsize=(3.4, 2.1))
     markers = {"perfect": "o", "radioml": "s", "synthetic": "^"}
     for cond in ["perfect", "radioml"]:
         sub = df[df["condition"] == cond]
@@ -207,7 +207,7 @@ def fig_pdr_vs_violations(df: pd.DataFrame, out_name: str = "fig_pdr_vs_violatio
     ax.set_xlabel("Mean safety-violation rate")
     ax.set_ylabel("Mean priority-flow PDR")
     ax.set_xlim(-0.02, 0.55)
-    ax.set_ylim(0.5, 1.02)
+    ax.set_ylim(0.70, 1.02)
     ax.axvspan(-0.02, 0.001, color="#f0f0f0", alpha=0.6, label="zero-violation region")
     ax.grid(linestyle=":", linewidth=0.5, alpha=0.6)
     fig.tight_layout()
