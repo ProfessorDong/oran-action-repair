@@ -1,0 +1,20 @@
+# Datasets and model weights (download via scripts/)
+sim/data/*
+!sim/data/.gitkeep
+sim/models/*
+!sim/models/.gitkeep
+
+# Per-seed JSONL logs (regenerable; keep only the aggregated CSV/JSON)
+sim/results/*.jsonl
+
+# Python / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
