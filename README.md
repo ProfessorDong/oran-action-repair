@@ -1,160 +1,146 @@
-# SHIELD-RIC — Provably Safe Agentic Control of Self-Healing Open RAN Tactical Edge Networks
+# Action repair and predicate-coverage analysis for Open RAN control
 
-Code and aggregated results accompanying the IEEE MILCOM 2026 submission
-*"SHIELD-RIC: Provably Safe Agentic Control of Self-Healing Open RAN Tactical
-Edge Networks"* by Liang Dong (Baylor University).
+Provably sound agentic control for self-healing Open RAN: an untrusted planner
+proposes cross-layer recovery actions and a deterministic shield decides what is
+actuated, repairing inadmissible candidates rather than discarding them.
 
-> **SHIELD** stands for *Shielded Hypothesis-Intent, Evidenced LLM Decisions*.
-> An LLM proposes cross-layer recovery actions; a deterministic safety shield
-> filters every candidate against a predicate set $\Phi$; the controller
-> issues only admitted actions and rolls back if a guard fails.  Soundness is
-> proved (Lemma 1) and regret is bounded by twin error and planner coverage
-> (Theorem 1).  Both are verified numerically.
+Accompanies a manuscript submitted to *IEEE Transactions on Network and Service
+Management*. Sole author: Liang Dong, Baylor University.
 
-This repository contains the discrete-event simulator, the perception
-classifier, the verification scripts, the bootstrap-CI / Wilcoxon analysis,
-the real-LLM driver, and the figure generators.  All aggregated results
-cited in the paper are committed as small CSV/JSON files so reviewers can
-re-derive every reported number without re-running the simulator.
+This repository contains the manuscript, the simulator, and everything needed
+to regenerate every number, table, and figure in the paper. No value quoted in
+the manuscript is typed by hand: `sim/journal/make_numbers.py` emits
+`numbers.tex`, `tab_headline.tex`, and `tab_loo.tex` from the result CSVs, and
+the paper reads only those.
 
----
+## What is and is not in this repository
 
-## What is in this repo
+Included: the manuscript source and PDF, the simulator used for every result,
+and the aggregated result files the numbers are generated from.
 
-```
-sim/
-  src/
-    shield_ric.py        # discrete-event Open RAN simulator (cross-layer cPOMDP)
-    perception.py        # RadioML 2016.10A loader + ResNet-1D classifier trainer
-    run_experiments.py   # sweeps 3 perception conditions x 6 scenarios x 5 controllers x N seeds
-    verify_theorem.py    # numerical verification of Theorem 1 (xi, cov_K, regret bound)
-    stats.py             # bootstrap 95% CIs and Wilcoxon signed-rank test
-    llm_planner.py       # real local LLM (Qwen2.5-1.5B-Instruct) driving the planner
-    make_figures.py      # vector-PDF figure generation
-  results/
-    master.csv           # aggregated PDR / violation-rate per (controller, scenario, seed, condition)
-    theorem_verify.csv   # xi_max, cov_K, measured regret, theoretical bound per scenario
-    stats.json           # bootstrap CIs and Wilcoxon test output
-    llm_planner.csv      # Qwen-driven planner results: PDR, violation rate, cov_K, latency
-    perception_radioml.json  # classifier accuracy + row-normalised confusion matrix
-  figs/                  # generated PDF/PNG figures used in the manuscript
-scripts/
-  download_radioml.sh    # fetch RadioML 2016.10A from Zenodo
-  download_qwen.sh       # fetch Qwen2.5-1.5B-Instruct from ModelScope
-LICENSE                  # MIT
-README.md
-```
+Not included, and to be fetched separately:
 
-The manuscript LaTeX source is **not** redistributed; only data, code,
-and aggregated outputs are released here.
+| Item | Where |
+|---|---|
+| Qwen2.5-1.5B-Instruct weights | `scripts/download_qwen.sh` (Hugging Face) |
+| DeepSig RadioML 2016.10A | `scripts/download_radioml.sh` |
+| ColO-RAN dataset (7.6 GB) | github.com/wineslab/colosseum-oran-coloran-dataset |
 
----
+Also not included: the source PDFs of the reviewed literature, which are
+copyrighted and cannot be redistributed.
 
-## Datasets and model weights
+An earlier simulator is retained locally but deliberately not published: it
+contains a circular evaluation, in which the controller was scored against the
+same predicate set the shield enforced, that this work exists to correct.
 
-Two external assets are not committed and must be downloaded separately:
-
-| Asset | Size | Source | Script |
-|---|---|---|---|
-| DeepSig RadioML 2016.10A | 213 MB tar.bz2 | [Zenodo 18397070](https://zenodo.org/records/18397070) | `scripts/download_radioml.sh` |
-| Qwen2.5-1.5B-Instruct weights | 2.9 GB | [ModelScope mirror](https://www.modelscope.cn/models/Qwen/Qwen2.5-1.5B-Instruct) | `scripts/download_qwen.sh` |
-
-After running both scripts you should have:
+## Layout
 
 ```
-sim/data/RML2016.10a_dict_optimized.pkl
-sim/models/Qwen2.5-1.5B-Instruct/{config.json, model.safetensors, ...}
+main.tex                 manuscript (IEEEtran, journal class)
+references.bib           bibliography
+numbers.tex              GENERATED -- every numeric claim in the paper
+tab_headline.tex         GENERATED -- Table III (headline results)
+tab_loo.tex              GENERATED -- Table IV (predicate ablation)
+fig_*.pdf                GENERATED -- figures copied from sim/journal/figs/
+
+sim/journal/             journal-edition simulator (this paper)
+  core.py                network model, latent hazard oracle H, predicate sets,
+                         perception-aware digital twin
+  shield.py              shield, repair operator, all eight controllers
+  adversary.py           benign / overt / adaptive (Kerckhoffs) planners
+  conditional.py         estimator of r_bar(o,a) = E[reward | o, a]
+  experiments.py         main sweeps E1-E6
+  theory.py              Theorem 1 verification and its sweeps
+  calibration.py         perception-aware twin calibration study
+  multicell.py           cluster-coupled predicates, Algorithm 3
+  llm_planner.py         local LLM planner + prompt-injection experiment
+  repair_stats.py        what the repair operator actually edits
+  stats_j.py             bootstrap CIs, Wilcoxon + Holm, Cliff's delta
+  timing.py              latency microbenchmark for the actuation path
+  figures.py             all figures
+  make_numbers.py        CSV -> LaTeX macros, with consistency checks
+
+sim/src/                 earlier conference-draft simulator, kept for reference
+sim/data/                RadioML 2016.10A (not redistributed here)
+sim/models/              local LLM weights (not redistributed here)
 ```
 
-> The HuggingFace public endpoint rate-limits anonymous model downloads to a
-> few KB/s, so `download_qwen.sh` uses the ModelScope mirror, which serves
-> the Qwen weights at 10-30 MB/s.
-
----
-
-## Software requirements
-
-Tested on Ubuntu 24.10, Python 3.12, single NVIDIA RTX 4060 Laptop GPU (8 GB).
-
-```
-pip install numpy scipy pandas matplotlib torch
-pip install transformers accelerate   # only for llm_planner.py
-```
-
-Anything able to run PyTorch 2.x with CUDA will work; CPU-only runs of the
-simulator are also fine (just slower for `perception.py`).
-
----
-
-## Reproducing every number in the paper
-
-A single shell session that re-derives every value cited in the manuscript
-(headline table, Theorem 1 verification, bootstrap CIs, real-LLM result):
+## Reproducing
 
 ```bash
-cd sim
-# 1. Train the RadioML interference classifier (~15 min on GPU)
-python3 src/perception.py --source radioml \
-        --radioml-pkl data/RML2016.10a_dict_optimized.pkl \
-        --epochs 15 --out results/perception_radioml.json
+cd sim/journal
 
-# 2. Main sweep: 3 conditions x 6 scenarios x 5 controllers x 10 seeds
-python3 src/run_experiments.py --seeds 0 1 2 3 4 5 6 7 8 9 --cycles 300
+# 1. main sweeps: 8 controllers x 6 scenarios x 30 seeds x 300 cycles,
+#    over three adversaries and two predicate sets   (~35 min, CPU)
+python3 experiments.py --seeds 30 --cycles 300
 
-# 3. Theorem 1 numerical verification (xi, cov_K, regret vs. bound)
-python3 src/verify_theorem.py --seeds 0 1 2 3 4 5 6 7 8 9 --cycles 300 --perception radioml
+# 2. Theorem 1: per-scenario bound, twin-mismatch sweep, candidate-budget
+#    sweep, repair-vs-filter coverage                 (~6 min, CPU)
+python3 theory.py --seeds 10 --cycles 300
 
-# 4. Bootstrap 95% CIs and Wilcoxon test
-python3 src/stats.py
+# 3. perception-aware twin calibration                (~3 min, CPU)
+python3 calibration.py --seeds 10 --cycles 300
 
-# 5. Real local-LLM driver (Qwen2.5-1.5B-Instruct, ~25 min for 480 cycles)
-python3 src/llm_planner.py --cycles 80 --seeds 0 1 \
-        --scenarios narrowband wideband compromised_xapp
+# 4. cluster-coupled policy, C = 3..19                (~10 min, CPU)
+python3 multicell.py --seeds 15 --cycles 300
 
-# 6. Generate all figures
-python3 src/make_figures.py
+# 5. repair-edit statistics                           (~5 min, CPU)
+python3 repair_stats.py --seeds 30 --cycles 300
+
+# 6. statistics: bootstrap CIs, paired tests          (~1 min)
+python3 stats_j.py
+
+# 7. actuation-path latency microbenchmark            (~1 min)
+python3 timing.py
+
+# 8. local LLM planner + prompt injection             (~2 h, one GPU)
+python3 llm_planner.py --cycles 60 --seeds 0 1 2 \
+        --scenarios narrowband wideband compound
+
+# 9. figures, LaTeX macros, consistency checks, and the PDF
+cd ../.. && ./build.sh
 ```
 
-Total runtime is about **45 minutes** on a single 8 GB GPU.  If you only
-want to regenerate figures or aggregate analysis from the committed CSVs,
-skip steps 1, 2, 3, 5 and run steps 4 and 6 only (a few seconds).
+`make_numbers.py` prints a block of consistency checks at the end. Every one
+must read `OK`; they assert the qualitative claims the prose makes (that the
+repaired shield has the highest mean PDR, that the bound is non-vacuous, that
+the shielded controllers record exactly zero policy violations, and so on).
 
-### Mapping every paper claim to a CSV cell
+## What is measured, and what it means
 
-| Manuscript claim | File | Cell |
-|---|---|---|
-| 0.000 violation rate, every scenario, RadioML perception | `master.csv` | `controller==shield_ric & condition==radioml` rows |
-| 34.7-52.3 % unshielded-baseline violation range | `master.csv` | `controller in {rl, llm_only}` per-scenario means |
-| 79.06 % perception accuracy | `perception_radioml.json` | `info.val_accuracy` |
-| xi in [1.13, 1.48], cov_K in [0.0003, 0.008] | `theorem_verify.csv` | `xi_max`, `cov_K_mean` |
-| Measured cumulative regret 0.07-0.23 per cycle | `theorem_verify.csv` | `G_measured_per_cycle` |
-| Bootstrap CI half-width <= 0.010 | `stats.json` | `summary.<scenario>.shield_ric` |
-| Wilcoxon p < 1e-4 | `stats.json` | `wilcoxon.pvalue` |
-| 480 LLM cycles, 0.000 violations | `llm_planner.csv` | `violation_rate` column |
-| -phi_rf admits 20.8-34.2 %, -phi_id 15.5-23.8 %, ... | reproduce with leave-one-out flag in `shield_ric.py`; see Section V ablation paragraph | |
+The simulator reports two distinct safety metrics, and the distinction is the
+paper's main point.
 
----
+* `violation_rate_phi` is the fraction of cycles on which the **actuated**
+  action violated the **deployed** predicate set `Phi`. For any correctly
+  implemented shield this is identically zero. It is a machine-checkable
+  witness for Lemma 1 and nothing more; scoring a shield against its own
+  predicates cannot produce any other answer.
 
-## License
+* `hazard_rate` is the fraction of cycles on which the actuated action
+  triggered the **latent hazard oracle** `H`, which reads the latent state and
+  is strictly richer than `Phi`: a regulatory power cap that tightens while a
+  protected incumbent transmits, a relay compromised after admission, a power
+  amplifier above its thermal limit, sustained priority starvation. No
+  controller can see `H`. This is the number that matters operationally.
 
-MIT, see [LICENSE](LICENSE).  The bundled RadioML 2016.10A dataset is
-distributed under CC BY-NC-SA 4.0 by DeepSig and is **not** included in
-this repository; please respect its license terms when downloading from
-Zenodo.
+Against the adaptive (Kerckhoffs) adversary, which knows the predicate schema
+and therefore proposes only `Phi`-admissible actions, the first column is exactly
+zero while the second is not. That gap is the paper's central result.
 
-## Citation
+## Data and models
 
-```
-@inproceedings{dong_shield_ric_2026,
-  author    = {Liang Dong},
-  title     = {{SHIELD-RIC}: Provably Safe Agentic Control of Self-Healing
-               {Open RAN} Tactical Edge Networks},
-  booktitle = {Proc. IEEE Military Communications Conference (MILCOM)},
-  year      = {2026}
-}
-```
+* Interference perception is trained on DeepSig **RadioML 2016.10A**, which
+  must be downloaded separately into `sim/data/`. The trained classifier's
+  validation confusion matrix is checked in at
+  `sim/results/perception_radioml.json`, so every experiment except retraining
+  the classifier runs without the raw dataset.
+* The LLM experiment uses a local **Qwen2.5-1.5B-Instruct** checkout in
+  `sim/models/`. Weights are not redistributed here. Nothing leaves the
+  machine at any point.
 
-## Contact
+## Requirements
 
-Liang Dong, Department of Electrical and Computer Engineering, Baylor
-University, Waco, Texas 76798, USA.  `Liang_Dong@baylor.edu`.
+Python 3.12 with `numpy`, `pandas`, `scipy`, `matplotlib`; `torch` and
+`transformers` for the classifier and the LLM planner; TeX Live with
+`IEEEtran`, `algorithmicx`, `subfig`, `booktabs`.

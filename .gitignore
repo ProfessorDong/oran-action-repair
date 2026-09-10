@@ -1,19 +1,56 @@
-# Datasets and model weights (download via scripts/)
-sim/data/*
-!sim/data/.gitkeep
-sim/models/*
-!sim/models/.gitkeep
+# ===========================================================================
+# Third-party material that must not be redistributed
+# ===========================================================================
+# Source PDFs of the reviewed literature, including three commercial books.
+refs/
+# Qwen2.5-1.5B-Instruct weights.
+sim/models/
+# DeepSig RadioML 2016.10A.
+sim/data/
+# The public ColO-RAN dataset (Polese et al., IEEE TMC 2023), 7.6 GB:
+# github.com/wineslab/colosseum-oran-coloran-dataset
+colosseum-oran-coloran-dataset-master/
 
-# Per-seed JSONL logs (regenerable; keep only the aggregated CSV/JSON)
-sim/results/*.jsonl
+# ===========================================================================
+# Superseded artifacts of an earlier simulator, kept locally for reference
+# only.  They contain the circular evaluation this work replaced and do not
+# correspond to the manuscript.
+# ===========================================================================
+sim/src/
+sim/figs/
+sim/results/
+sim/main.*
+sim/texput.log
+attic/
 
-# Python / build artifacts
+# ===========================================================================
+# Working documents, not part of the artifact
+# ===========================================================================
+CLAUDE.md
+PROJECT_STATUS.md
+REVISIONS.txt
+
+# ===========================================================================
+# Regenerable outputs
+# ===========================================================================
+sim/journal/figs/
+sim/journal/results/*.log
+sim/journal/results/*.jsonl
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Python / OS
 __pycache__/
 *.py[cod]
-*.egg-info/
-.ipynb_checkpoints/
-
-# OS / editor
 .DS_Store
 .idea/
 .vscode/

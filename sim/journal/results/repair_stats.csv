@@ -1,0 +1,16 @@
+kind,name,label,count,share
+component,power_dbm,transmit power,47189,0.4180234927271761
+component,waveform,waveform,43926,0.38911822546639974
+component,route,route,43357,0.3840777421469447
+component,workload,placement,6431,0.05696897755257516
+component,slice_,slice,4452,0.0394380171146112
+component,mod_code,MCS,2779,0.024617755966195986
+predicate,phi_rf,phi_rf,80313,0.711452261573623
+predicate,phi_id,phi_id,43357,0.3840777421469447
+predicate,phi_bh,phi_bh,6431,0.05696897755257516
+predicate,phi_qos,phi_qos,4452,0.0394380171146112
+predicate,phi_pol,phi_pol,2779,0.024617755966195986
+totals,candidates,candidates,270000,1.0
+totals,repaired,repaired,112886,0.4180962962962963
+aliasing,raw_distinct_per_cycle,distinct candidates before repair,269896,4.998074074074074
+aliasing,rep_distinct_per_cycle,distinct candidates after repair,269833,4.996907407407408
