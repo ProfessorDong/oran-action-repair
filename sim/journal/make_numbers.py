@@ -226,6 +226,15 @@ if llm_p.exists():
     put("LLMCycles", str(int(L.cycles.iloc[0])))
     put("LLMCalls", f"{int(L.cycles.sum()):,}".replace(",", "{,}"))
     put("LLMReproTime", f"{L.cycles.sum() * L.mean_call_s.mean() / 60:.0f}\\,min")
+    # mean_call_s is total generation time divided by the number of PROMPTS in
+    # a lockstep batch, i.e. amortized cost, not single-request latency.
+    put("LLMBatch", str(len(L)))
+    put("LLMBatchTime", f"{len(L) * L.mean_call_s.mean():.1f}\\,s")
+    # Aliasing loss: both per-cycle means round to 5.00, which is not zero.
+    _rs = pd.read_csv(RESULTS / "repair_stats.csv").set_index("name")
+    _lost = int(_rs.loc["raw_distinct_per_cycle", "count"]
+                - _rs.loc["rep_distinct_per_cycle", "count"])
+    put("AliasLoss", f"{_lost:,}".replace(",", "{,}"))
 else:
     for k in ("InjCandRate", "BenignCandRate", "InjActUnshielded",
               "InjHazUnshielded", "BenignHazUnshielded", "InjCandShielded",
@@ -337,8 +346,8 @@ if rs.exists():
         put(f"RepairTop{tag}Share", pct(float(comp.share.iloc[i]), 0))
     al = r[r.kind == "aliasing"].set_index("name")
     if len(al):
-        put("DistinctRaw", num(float(al.loc["raw_distinct_per_cycle", "share"]), 2))
-        put("DistinctRepaired", num(float(al.loc["rep_distinct_per_cycle", "share"]), 2))
+        put("DistinctRaw", num(float(al.loc["raw_distinct_per_cycle", "share"]), 3))
+        put("DistinctRepaired", num(float(al.loc["rep_distinct_per_cycle", "share"]), 3))
 else:
     for k in (("RepairRate", "DistinctRaw", "DistinctRepaired")
               + tuple(f"RepairTop{t}{x}" for t in "ABC" for x in ("", "Share"))):
@@ -346,6 +355,34 @@ else:
 
 # --- consistency checks on claims made in the prose -----------------------
 checks = []
+_ip_p = RESULTS / "intrinsic_price.json"
+if _ip_p.exists():
+    _ip = json.loads(_ip_p.read_text())
+    put("DeltaPhi", f"{_ip['mean_delta_phi']:.4f}")
+    put("PostEntropy", f"{_ip['posterior_entropy_bits']:.2f}")
+    put("PostEntropyMax", f"{_ip['posterior_entropy_max']:.1f}")
+    # The constraint itself is nearly free; the shield's measured price is
+    # therefore mechanism (finite pool, imperfect ranking), not the constraint.
+    checks.append(("the intrinsic price of the constraint is under 0.01",
+                   _ip["mean_delta_phi"] < 0.01, f"{_ip['mean_delta_phi']:.4f}"))
+    checks.append(("the posterior over latent states is NOT degenerate",
+                   _ip["posterior_entropy_bits"] > 0.05,
+                   f"{_ip['posterior_entropy_bits']:.2f} bits mean"))
+else:
+    for _k in ("DeltaPhi", "PostEntropy", "PostEntropyMax"):
+        put(_k, "n/a")
+# The thermal component of the coverage gap exists only because the signed
+# power ceiling sits above the amplifier's sustained-safe power.  State both,
+# and assert the relationship the prose depends on.
+_Pcrit = _core.P_NOMINAL + (_core.T_MAX_C - _core.T_AMBIENT_C) * 0.18 / 0.55
+put("PSafeThermal", f"{_Pcrit:.2f}")
+put("PCeiling", f"{_core.P_MAX_POLICY:.0f}")
+checks.append(("the signed ceiling exceeds the sustained-safe PA power",
+               _core.P_MAX_POLICY > _Pcrit,
+               f"ceiling {_core.P_MAX_POLICY:.1f} > safe {_Pcrit:.2f} dBm"))
+checks.append(("the ceiling is an attainable setting (it is in the domain)",
+               any(abs(p - _core.P_MAX_POLICY) < 1e-9 for p in _core.POWERS),
+               f"{_core.P_MAX_POLICY} in POWERS"))
 # Fig. 8 and the prose both say per-cell shielding stays ahead at every cluster
 # size, and that Alg. 3 does not beat it.  Assert both.
 _sc = pd.read_csv(RESULTS / "multicell_scale.csv").pivot_table(
@@ -365,9 +402,13 @@ checks.append(("Phi+ leaves the unshielded controllers untouched",
                abs(_lp.loc["greedy_twin", "phi"] - _lp.loc["greedy_twin", "phi_plus"]) < 1e-9
                and abs(_lp.loc["llm_only", "phi"] - _lp.loc["llm_only", "phi_plus"]) < 1e-9,
                "identical to the digit"))
-checks.append(("Phi+ makes Lagrangian-RL WORSE, not better (it trains on the set)",
-               _lp.loc["lagrangian_rl", "phi_plus"] > _lp.loc["lagrangian_rl", "phi"],
-               f"{_lp.loc['lagrangian_rl','phi']:.3f} -> {_lp.loc['lagrangian_rl','phi_plus']:.3f}"))
+# Lagrangian-RL trains on the violation indicator, so Phi+ reaches it -- but
+# only as a nudge, an order of magnitude smaller than the shift the shielded
+# controllers get.  This is a HYPOTHESIS about the data, not an invariant.
+_dl = abs(_lp.loc["lagrangian_rl", "phi_plus"] - _lp.loc["lagrangian_rl", "phi"])
+_ds = abs(_lp.loc["shield_repair", "phi_plus"] - _lp.loc["shield_repair", "phi"])
+checks.append(("Phi+ moves Lagrangian-RL far less than it moves the shield",
+               _dl < 0.1 * _ds, f"{_dl:.3f} vs {_ds:.3f}"))
 # Proposition 3 says repair can only enlarge the admitted pool, so the coverage
 # deficit and the measured gap must fall in EVERY scenario, not just on average.
 # Figure 5 shows them per scenario, so a single reversal would contradict it.
@@ -422,6 +463,17 @@ put("DiffFilterGreedy", pts(_filtgap, 1))
 # prose compares it against -- reporting one as a fraction and the other as a
 # percentage is how a reader is misled.
 put("RepairRecovers", pts(_filtgap - _gap, 1))
+# The matched baseline: filter-only but with the fallback always in the pool,
+# so the only difference from repair is the operator itself.
+if "shield_filter_fb" in g.mean_pdr.mean().index:
+    _fb = float(g.mean_pdr.mean()["shield_filter_fb"])
+    put("PDRShieldFilterFB", num(_fb))
+    put("RepairOverFilterFB", pts(float(g.mean_pdr.mean()["shield_repair"]) - _fb))
+    put("RepairOverFilter", pts(float(g.mean_pdr.mean()["shield_repair"])
+                                - float(g.mean_pdr.mean()["shield_filter"])))
+else:
+    for _k in ("PDRShieldFilterFB", "RepairOverFilterFB", "RepairOverFilter"):
+        put(_k, "n/a")
 put("RepairRecoversFrac", pct((_filtgap - _gap) / _filtgap, 0))
 # Repair is LESS safe than filtering on the latent-hazard metric.  The paper
 # says so; this keeps the claim honest if the numbers move.

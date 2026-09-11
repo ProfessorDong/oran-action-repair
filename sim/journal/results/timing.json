@@ -1,12 +1,12 @@
 {
   "n_cycles": 20000,
   "K": 5,
-  "predicates_us": 2.19541799997387,
-  "shield_repair_us": 55.91597964994435,
-  "shield_repair_plus_us": 71.09385389994713,
-  "twin_us": 105.21772854990559,
+  "predicates_us": 5.234852099965792,
+  "shield_repair_us": 63.99319244956131,
+  "shield_repair_plus_us": 83.01078470030916,
+  "twin_us": 107.26455854965025,
   "platform": "x86_64",
   "python": "3.12.13",
-  "actuation_path_us": 161.13370819984993,
-  "repro_minutes": 20.0
+  "actuation_path_us": 171.25775099921157,
+  "repro_minutes": 25.0
 }

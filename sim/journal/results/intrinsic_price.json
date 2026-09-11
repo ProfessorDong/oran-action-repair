@@ -1,0 +1,43 @@
+{
+  "per_scenario": [
+    {
+      "scenario": "narrowband",
+      "delta_phi": 1.652940259370498e-08,
+      "delta_phi_p95": 5.787682832991692e-08,
+      "n": 3000
+    },
+    {
+      "scenario": "wideband",
+      "delta_phi": 0.00040905333765570075,
+      "delta_phi_p95": 0.0005552553349650324,
+      "n": 3000
+    },
+    {
+      "scenario": "bursty",
+      "delta_phi": 6.937357063160714e-07,
+      "delta_phi_p95": 3.6623817618597343e-06,
+      "n": 3000
+    },
+    {
+      "scenario": "backhaul",
+      "delta_phi": 5.5976925024162996e-08,
+      "delta_phi_p95": 5.787682832991692e-08,
+      "n": 3000
+    },
+    {
+      "scenario": "compromised_xapp",
+      "delta_phi": 9.653569159569683e-09,
+      "delta_phi_p95": 5.787682832991692e-08,
+      "n": 3000
+    },
+    {
+      "scenario": "compound",
+      "delta_phi": 3.713417718873013e-05,
+      "delta_phi_p95": 0.00013354571159018835,
+      "n": 3000
+    }
+  ],
+  "mean_delta_phi": 7.449390174125406e-05,
+  "posterior_entropy_bits": 0.35940746813396807,
+  "posterior_entropy_max": 4.327855374411444
+}

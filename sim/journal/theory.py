@@ -136,10 +136,14 @@ def instrumented_run(scenario: str, seed: int, cycles: int = 300, k: int = 5,
         rows.append(TheoryRow(
             scenario=scenario, seed=seed, cycle=c, xi_cycle=xi_cycle,
             xi_pool=xi_pool, r_star=r_star, r_dagger=float(r_dag),
-            regret=float(max(0.0, r_dag - r_star)),
+            regret=float(r_dag - r_star),
             cov_eps=cov_eps, cov_exact=cov_exact, pool_size=len(pool),
             r_clairvoyant=float(r_clair),
-            perception_gap=float(max(0.0, r_clair - r_dag)),
+            # NOT clipped: r_clair uses the sampled latent state while
+            # r_dag is a conditional optimum, so a single cycle may be
+            # negative.  The information-value inequality holds in
+            # expectation, which is what we report.
+            perception_gap=float(r_clair - r_dag),
         ))
 
         pdr = realised_pdr(st, a_star)

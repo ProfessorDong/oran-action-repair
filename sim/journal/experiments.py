@@ -193,7 +193,7 @@ def run_episode(scenario: str, controller: str, seed: int,
 
 MAIN_CONTROLLERS = ["static", "heuristic", "greedy_twin", "llm_only",
                     "lagrangian_rl", "simplex_rta", "shield_filter",
-                    "shield_repair"]
+                    "shield_filter_fb", "shield_repair"]
 
 
 def _one(job):

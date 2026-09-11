@@ -54,7 +54,10 @@ BEAMS = ("omni", "sector_a", "sector_b", "narrow")
 ROUTES = ("primary", "secondary", "mesh_a", "mesh_b")
 SLICES = ("urgent", "balanced", "best_effort")
 WORKLOADS = ("local", "edge", "cloud")
-POWERS = (17.0, 20.0, 23.0, 26.0, 29.0, 33.0, 36.0)
+POWERS = (17.0, 20.0, 23.0, 26.0, 29.0, 30.0, 33.0, 36.0)
+# 30.0 is the signed policy ceiling itself.  A ceiling that no setting can
+# reach is not a ceiling, and an attacker instructed to sit exactly at it
+# would otherwise have to leave the declared action space.
 
 # Per-MCS demodulation thresholds, CALIBRATED against the public ColO-RAN
 # Colosseum traces (see coloran.py).  The scheduler's link adaptation selects
@@ -310,10 +313,35 @@ def realised_sinr(st: LatentState, a: Action, noise: bool = True,
     return float(sinr)
 
 
+SINR_NOISE_DB = 0.6            # std of the per-cycle SINR perturbation
+_GH_X, _GH_W = np.polynomial.hermite_e.hermegauss(21)   # E[f(X)], X ~ N(0,1)
+_GH_W = _GH_W / _GH_W.sum()
+
+
+def expected_pdr(st: LatentState, a: Action, interf_ext_db: float = 0.0) -> float:
+    """E[PDR | latent state, a], integrating the SINR perturbation out with
+    Gauss-Hermite quadrature.  The delivery curve is a logistic, so evaluating
+    it at the mean SINR is NOT the mean delivery: at a 1 dB margin the two
+    differ by about 0.03, which is the scale of the regret the paper reports."""
+    return float(sum(w * _pdr_at(st, a, off * SINR_NOISE_DB, interf_ext_db)
+                     for off, w in zip(_GH_X, _GH_W)))
+
+
+def _pdr_at(st: LatentState, a: Action, sinr_offset: float,
+            interf_ext_db: float = 0.0) -> float:
+    sinr = realised_sinr(st, a, noise=False,
+                         interf_ext_db=interf_ext_db) + sinr_offset
+    return _pdr_from_sinr(st, a, sinr)
+
+
 def realised_pdr(st: LatentState, a: Action, noise: bool = True,
                  interf_ext_db: float = 0.0) -> float:
-    """True priority-flow packet delivery ratio in [0, 1]."""
+    """Realised priority-flow delivery ratio for one cycle."""
     sinr = realised_sinr(st, a, noise=noise, interf_ext_db=interf_ext_db)
+    return _pdr_from_sinr(st, a, sinr)
+
+
+def _pdr_from_sinr(st: LatentState, a: Action, sinr: float) -> float:
     margin = sinr - MCS_REQ_DB[a.mod_code]
     pdr = PDR_CEILING / (1.0 + math.exp(-BLER_SLOPE * margin))
     if not st.backhaul_ok:
@@ -527,9 +555,19 @@ def violated_predicates(o: Observation, a: Action,
     return [p.name for p in phi if p.fn(o, a)]
 
 
+def in_action_space(a: Action) -> bool:
+    """a in A = prod_j A_j.  Admission is defined over A, so a candidate whose
+    fields are not drawn from the declared domains is inadmissible however it
+    scores against Phi."""
+    return (a.waveform in WAVEFORMS and a.mod_code in MOD_CODES
+            and a.beam in BEAMS and a.route in ROUTES
+            and a.slice_ in SLICES and a.workload in WORKLOADS
+            and any(abs(a.power_dbm - p) < 1e-9 for p in POWERS))
+
+
 def admissible(o: Observation, a: Action, phi: Sequence[Predicate]) -> bool:
-    """Indicator Pi_Phi(o, a) of Eq. (shield)."""
-    return not any(p.fn(o, a) for p in phi)
+    """Indicator Pi_Phi(o, a) of Eq. (shield): a in A and no predicate fires."""
+    return in_action_space(a) and not any(p.fn(o, a) for p in phi)
 
 
 # ---------------------------------------------------------------------------

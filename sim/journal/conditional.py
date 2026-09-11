@@ -37,7 +37,7 @@ import numpy as np
 
 from core import (
     Action, LatentState, Observation, SCENARIOS, SAFE_POOL, SAFE_FALLBACK,
-    step_environment, observe, realised_pdr, ALL_ACTIONS, BASE_SINR_DB)
+    step_environment, observe, realised_pdr, ALL_ACTIONS, BASE_SINR_DB, expected_pdr)
 
 
 
@@ -50,7 +50,7 @@ def _pdr_vector(st):
     key = latent_key(st)
     hit = _PDR_VEC_CACHE.get(key)
     if hit is None:
-        hit = np.array([realised_pdr(st, a, noise=False) for a in ALL_ACTIONS()])
+        hit = np.array([expected_pdr(st, a) for a in ALL_ACTIONS()])
         _PDR_VEC_CACHE[key] = hit
     return hit
 
@@ -114,10 +114,9 @@ class ConditionalModel:
             return hit
         w = self.weights.get(ok)
         if not w:
-            v = realised_pdr(_proto(("none", 0.0, True, BASE_SINR_DB)), a,
-                             noise=False)
+            v = expected_pdr(_proto(("none", 0.0, True, BASE_SINR_DB)), a)
         else:
-            v = sum(p * realised_pdr(self.protos[lk], a, noise=False)
+            v = sum(p * expected_pdr(self.protos[lk], a)
                     for lk, p in w.items())
         self._rbar_cache[ck] = float(v)
         return float(v)
@@ -190,8 +189,7 @@ class ConditionalModel:
                  o.twin_uncertainty > U_BAR, bool(o.backhaul_ok))
         mask = _admissible_mask(state, o, phi)
         if not mask.any():
-            return SAFE_FALLBACK, float(realised_pdr(st, SAFE_FALLBACK,
-                                                     noise=False))
+            return SAFE_FALLBACK, float(expected_pdr(st, SAFE_FALLBACK))
         idx = int(np.argmax(np.where(mask, pdr, -np.inf)))
         return ALL_ACTIONS()[idx], float(pdr[idx])
 

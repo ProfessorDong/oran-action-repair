@@ -146,11 +146,14 @@ class AdaptivePlanner(BenignPlanner):
     kind = "adaptive"
 
     def __init__(self, rng, k: int = 5, p_attack: float = 0.60,
-                 p_attack_faulty: float = 0.90, phi_ceiling: float = P_MAX_POLICY):
+                 p_attack_faulty: float = 0.90, phi_ceiling: float = P_MAX_POLICY,
+                 phi=None):
         super().__init__(rng, k)
         self.p_attack = p_attack
         self.p_attack_faulty = p_attack_faulty
         self.ceiling = phi_ceiling
+        from core import PHI_BASE
+        self.phi = PHI_BASE if phi is None else phi
 
     def _evade(self, o: Observation, a: Action) -> Action:
         """Push a candidate into the coverage gap without tripping Phi."""
@@ -174,12 +177,29 @@ class AdaptivePlanner(BenignPlanner):
         return a
 
     def propose(self, o: Observation) -> list[Action]:
+        """Every emitted candidate is Phi-admissible.
+
+        The evasion step steers into the coverage gap, but the unevaded
+        candidates come from the benign explorer and could trip Phi by
+        accident.  An adversary that knows the schema would not emit those --
+        it gains nothing from a candidate the shield rejects -- so we project
+        them into A_Phi(o) as well.  Enforcing the contract here is what makes
+        the "zero policy violations" column of Section VII-E meaningful:
+        without it, zero ACTUATED violations would partly reflect the shield
+        rejecting the attacker's own mistakes.
+        """
+        from core import admissible, in_action_space
+        from shield import repair
         cands = super().propose(o)
         p = self.p_attack_faulty if o.trust_state == "faulty_xapp" else self.p_attack
-        for i, a in enumerate(cands):
+        out = []
+        for a in cands:
             if self.rng.random() < p:
-                cands[i] = self._evade(o, a)
-        return cands
+                a = self._evade(o, a)
+            if not (in_action_space(a) and admissible(o, a, self.phi)):
+                a = repair(o, a, self.phi)[0]
+            out.append(a)
+        return out
 
 
 PLANNERS = {"benign": BenignPlanner, "naive": NaivePlanner,

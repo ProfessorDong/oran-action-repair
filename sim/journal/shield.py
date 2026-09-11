@@ -227,7 +227,9 @@ class LLMOnlyController(BaseController):
 
 
 class ShieldFilterController(BaseController):
-    """Conference the shielded controller: reject-only shield plus signed fallback."""
+    """Reject-only shield: the ranked shield of Alshiekh et al., which executes
+    the highest-ranked admissible candidate and deviates to a verified action
+    only when none is admissible."""
     name = "shield_filter"
 
     def step(self, o, twin):
@@ -241,8 +243,28 @@ class ShieldFilterController(BaseController):
                         n_admitted=len(adm))
 
 
+class ShieldFilterFallbackController(BaseController):
+    """Filter-only, but with the signed fallback ALWAYS in the pool.
+
+    The ranked shield above appends the fallback only when nothing is
+    admissible, while the repaired controller always appends it.  Comparing
+    those two mixes the repair operator with a change in the pool.  This
+    controller isolates the operator: it differs from ShieldRepairController in
+    exactly one respect, that inadmissible candidates are dropped rather than
+    projected."""
+    name = "shield_filter_fb"
+
+    def step(self, o, twin):
+        cands = self.planner.propose(o)
+        adm = [a for a in cands if admissible(o, a, self.phi)]
+        pool = adm + [SAFE_FALLBACK.copy()]
+        best = max(pool, key=lambda a: twin(o, a)[0])
+        return Decision(best, "admit" if adm else "fallback",
+                        n_candidates=len(cands), n_admitted=len(adm))
+
+
 class ShieldRepairController(BaseController):
-    """Journal the shielded controller: admissible candidates are kept, inadmissible ones
+    """Admissible candidates are kept, inadmissible ones
     are projected back into A_Phi(o) by the repair operator, and the signed
     fallback is always appended to the candidate set."""
     name = "shield_repair"
@@ -384,11 +406,12 @@ CONTROLLERS = {
     "lagrangian_rl": LagrangianRLController,
     "simplex_rta": SimplexRTAController,
     "shield_filter": ShieldFilterController,
+    "shield_filter_fb": ShieldFilterFallbackController,
     "shield_repair": ShieldRepairController,
 }
 
 NEEDS_PLANNER = {"greedy_twin", "llm_only", "lagrangian_rl", "simplex_rta",
-                 "shield_filter", "shield_repair"}
+                 "shield_filter", "shield_filter_fb", "shield_repair"}
 
 CONTROLLER_LABEL = {
     "static": "Static",
@@ -396,7 +419,7 @@ CONTROLLER_LABEL = {
     "greedy_twin": "Greedy-Twin",
     "llm_only": "LLM-only",
     "lagrangian_rl": "Lagrangian-RL",
-    "simplex_rta": "Simplex-RTA",
-    "shield_filter": "the shielded controller (filter)",
-    "shield_repair": "the shielded controller (repair)",
-}
+    "simplex_rta": "Reactive-RTA",
+    "shield_filter": "Shield (filter)",
+    "shield_filter_fb": "Shield (filter+fallback)",
+    "shield_repair": "Shield (repair)"}
