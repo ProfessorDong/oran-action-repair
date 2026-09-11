@@ -808,7 +808,7 @@ def headline_table() -> str:
     lines = [r"\begin{tabular}{l" + "c" * len(CT_ORDER) + "}", r"\toprule",
              "Scenario & " + " & ".join(CT_TEX[c] for c in CT_ORDER) + r" \\",
              r"\midrule",
-             r"\multicolumn{9}{l}{\emph{Mean priority-flow PDR / policy-violation rate w.r.t.\ $\Phi$}}\\"]
+             rf"\multicolumn{{{len(CT_ORDER)+1}}}{{l}}{{\emph{{Mean priority-flow PDR / policy-violation rate w.r.t.\ $\Phi$}}}}\\"]
     for sc in SC_ORDER:
         row = [SC_TEX[sc]]
         pdr = {c: MAIN[(MAIN.scenario == sc) & (MAIN.controller == c)].mean_pdr.mean()
@@ -823,7 +823,7 @@ def headline_table() -> str:
             row.append(f"{pv}/{vv}")
         lines.append(" & ".join(row) + r" \\")
     lines.append(r"\midrule")
-    lines.append(r"\multicolumn{9}{l}{\emph{Latent hazard rate w.r.t.\ $H$}}\\")
+    lines.append(rf"\multicolumn{{{len(CT_ORDER)+1}}}{{l}}{{\emph{{Latent hazard rate w.r.t.\ $H$}}}}\\")
     for sc in SC_ORDER:
         row = [SC_TEX[sc]]
         for c in CT_ORDER:
