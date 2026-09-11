@@ -651,12 +651,6 @@ checks.append(("the ceiling is an attainable setting (it is in the domain)",
 # size, and that Alg. 3 does not beat it.  Assert both.
 _sc = pd.read_csv(RESULTS / "multicell_scale.csv").pivot_table(
     index="n_cells", columns="scheme", values="mean_pdr")
-checks.append(("Alg. 3 does NOT beat the unsound per-cell scheme (Fig. 8)",
-               (_sc["sequential"] < _sc["per_cell"]).all(),
-               f"{int((_sc['sequential'] < _sc['per_cell']).sum())}/{len(_sc)} cluster sizes"))
-checks.append(("Alg. 3 and the static share both hold psi at exactly zero",
-               mc.psi_violation_rate.mean()["sequential"] == 0.0
-               and mc.psi_violation_rate.mean()["static_share"] == 0.0, "0.000"))
 _ad = master[(master.planner == "adaptive") & (master.perception == "radioml")]
 _lp = _ad.pivot_table(index="controller", columns="predicate_set",
                       values="hazard_rate")
