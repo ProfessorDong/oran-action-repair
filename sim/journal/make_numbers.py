@@ -140,6 +140,40 @@ if _xp.exists():
     _E2 = master[(master.planner == "adaptive")
                  & (master.predicate_set == "phi")].groupby("controller").mean(
                      numeric_only=True)
+    # A candidate-restricted selector cannot comply on a cycle whose entire
+    # pool is inadmissible, so its violation rate is only partly about the
+    # selector.  Report availability and split the violations accordingly.
+    _L = pd.read_csv(_xp); _L = _L[_L.controller == "lagrangian_rl"]
+    _av, _vi = _L.compliant_available_rate, _L.violation_rate_phi
+    _forced = (1 - _av).mean()
+    _cond = ((_vi - (1 - _av)) / _av).clip(0, 1).mean()
+    put("CrossFilterFallback",
+        pct(float(pd.read_csv(_xp).set_index("controller")
+                  .loc["shield_filter", "fallback_rate"].mean()), 1))
+
+    def crossed_table() -> str:
+        _T = pd.read_csv(_xp).groupby("controller").mean(numeric_only=True)
+        _rows = [("greedy_twin", "Greedy-Twin (unshielded)"),
+                 ("lagrangian_rl", "Lagrangian-RL"),
+                 ("simplex_rta", "Reactive-RTA"),
+                 ("shield_filter", "Shield (filter)"),
+                 ("shield_repair", "\\textbf{Shield (repair)}")]
+        out = ["\\begin{tabular}{lcccc}", "\\toprule",
+               "Controller & PDR & Hazard & Violates $\\Phi^{+}$ & Avail. \\\\",
+               "\\midrule"]
+        for _k, _lab in _rows:
+            r = _T.loc[_k]
+            out.append(f"{_lab} & {r.mean_pdr:.3f} & {r.hazard_rate:.3f} & "
+                       f"{r.violation_rate_phi:.3f} & "
+                       f"{r.compliant_available_rate:.3f} \\\\")
+        out += ["\\bottomrule", "\\end{tabular}"]
+        return "\n".join(out)
+
+    (PAPER / "tab_crossed.tex").write_text(crossed_table() + "\n")
+    put("CrossAvail", pct(_av.mean(), 1))
+    put("CrossForced", pct(_forced, 1))
+    put("CrossCondViol", pct(_cond, 1))
+    _availsp = pd.read_csv(_xp).groupby("controller").compliant_available_rate.mean()
     for _c, _k in (("greedy_twin", "Unshield"), ("lagrangian_rl", "Lagr"),
                    ("simplex_rta", "RTA"), ("shield_filter", "Filter"),
                    ("shield_repair", "Repair")):
@@ -282,8 +316,8 @@ else:
 pj = json.loads((RESULTS / "perception_radioml.json").read_text())
 acc = max(h["val_acc"] for h in pj["info"]["history"])
 put("ClassifierAcc", pct(acc, 2))
-import conditional as _cond
-put("StrengthBucket", f"{_cond.STRENGTH_BUCKET:.2f}")
+import conditional as _condmod
+put("StrengthBucket", f"{_condmod.STRENGTH_BUCKET:.2f}")
 # BBSE identifies the prior only if Gamma is invertible; report its conditioning
 # rather than asserting identifiability.
 _G = np.array([[pj["perception_confusion"][t][pr] for pr in _CLS]
@@ -402,6 +436,14 @@ checks.append(("the perception confusion matrix is invertible (BBSE rank cond.)"
 
 # Enforcement isolated from the attacker retargeting (E2b).
 if _xp.exists():
+    checks.append(("most of the learner's violations were unavoidable, not learned",
+                   _forced > 0.5 * _vi.mean(),
+                   f"{_forced:.3f} forced of {_vi.mean():.3f}"))
+    checks.append(("the learner still violated where a compliant action existed",
+                   _cond > 0.5, pct(_cond, 1)))
+    checks.append(("availability differs by controller, so streams are not matched",
+                   _availsp.max() - _availsp.min() > 0.05,
+                   f"{_availsp.min():.3f}-{_availsp.max():.3f}"))
     checks.append(("with the attacker pinned to Phi, the unshielded hazard rate "
                    "is unmoved by Phi+",
                    abs(float(X.loc["greedy_twin", "hazard_rate"])
@@ -456,6 +498,22 @@ if "structured" in g.mean_pdr.mean().index:
             _n_cross = _n
             break
     _pred = (_cyc - _n_cross + 1) / _cyc
+    # The claim that one step lower on the ceiling removes this hazard is
+    # checkable, not rhetorical: at the next power down the recurrence settles
+    # below the threshold and never crosses.
+    _P_below = max(p for p in _c.POWERS if p < 30.0)
+    _Teq = (0.18 * _c.T_AMBIENT_C + 0.55 * max(0.0, _P_below - _c.P_NOMINAL)) / 0.18
+    put("PBelowCeiling", f"{_P_below:.0f}")
+    put("TeqBelowCeiling", f"{_Teq:.1f}")
+    put("TeqAtCeiling", f"{(0.18 * _c.T_AMBIENT_C + 0.55 * (30.0 - _c.P_NOMINAL)) / 0.18:.1f}")
+    put("ThermKappa", "0.55")
+    put("ThermLambda", "0.18")
+    put("ThermTmax", f"{_c.T_MAX_C:.0f}")
+    put("ThermTamb", f"{_c.T_AMBIENT_C:.0f}")
+    put("ThermPnom", f"{_c.P_NOMINAL:.0f}")
+    checks.append(("one power step below the ceiling never crosses T_max",
+                   _Teq < _c.T_MAX_C,
+                   f"{_P_below:.0f} dBm settles at {_Teq:.1f} C < {_c.T_MAX_C:.0f}"))
     put("ThermCross", str(_n_cross))
     put("ThermPredicted", num(_pred))
     checks.append(("h_therm at the ceiling matches the analytic prediction",

@@ -85,8 +85,26 @@ class EpisodeSummary:
     h_pwr: float = 0.0
     h_relay: float = 0.0
     h_part: float = 0.0
+    compliant_available_rate: float = 1.0
     h_starve: float = 0.0
     h_therm: float = 0.0
+
+
+class _PoolRecorder:
+    """Transparent proxy that remembers the last candidate list a planner
+    returned, so the episode loop can ask what was on offer without drawing a
+    second proposal and perturbing the trajectory."""
+
+    def __init__(self, inner):
+        self._inner = inner
+        self.last: list = []
+
+    def propose(self, o):
+        self.last = self._inner.propose(o)
+        return self.last
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
 
 
 def run_episode(scenario: str, controller: str, seed: int,
@@ -123,12 +141,13 @@ def run_episode(scenario: str, controller: str, seed: int,
     else:
         planner = PLANNERS[planner_kind](rng, k=k)
 
+    planner = _PoolRecorder(planner)
     ctrl = CONTROLLERS[controller](planner=planner, phi=phi)
     ctrl.reset(rng)
 
     a_prev = Action()
     pdrs, rewards, powers = [], [], []
-    n_viol = n_haz = n_fb = n_rep = 0
+    n_viol = n_haz = n_fb = n_rep = n_avail = 0
     hcount = {h: 0 for h in HAZARD_NAMES}
     recovery = -1
     onset = cfg["onset"]
@@ -140,6 +159,13 @@ def run_episode(scenario: str, controller: str, seed: int,
         twin.observe_label(o.interference_class)
 
         d = ctrl.step(o, twin)
+        # Was a compliant action even available to a candidate-restricted
+        # selector?  A learner with no fallback cannot comply on a cycle whose
+        # whole pool is inadmissible, so its violation rate is evidence about
+        # the selector only where this is 1.  Read from the recorder so no
+        # extra proposal is drawn and the trajectory is unchanged.
+        if any(admissible(o, _c, phi_eval) for _c in planner.last):
+            n_avail += 1
         a = d.action
 
         # --- ground truth -------------------------------------------------
@@ -196,6 +222,7 @@ def run_episode(scenario: str, controller: str, seed: int,
         hazard_rate=n_haz / cycles,
         recovery_cycles=recovery if recovery >= 0 else cycles,
         fallback_rate=n_fb / cycles,
+        compliant_available_rate=n_avail / cycles,
         repair_rate=n_rep / (cycles * k),
         mean_power_dbm=float(np.mean(powers)),
         max_pa_temp_c=float(st.pa_temp_c),

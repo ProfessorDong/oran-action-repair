@@ -61,3 +61,6 @@ fig_frontier.pdf
 fig_perception_confusion.pdf
 fig_safety.pdf
 fig_trace.pdf
+
+# third-party review material, not part of the manuscript
+revisionideas/
