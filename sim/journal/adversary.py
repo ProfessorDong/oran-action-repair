@@ -106,7 +106,7 @@ class BenignPlanner:
 
 
 class NaivePlanner(BenignPlanner):
-    """Conference threat model: overt, Phi-detectable policy violations."""
+    """Overt threat model: Phi-detectable policy violations."""
     kind = "naive"
 
     POISONS = ("waveform", "power", "route", "slice", "workload", "mcs")

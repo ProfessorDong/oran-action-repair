@@ -64,9 +64,20 @@ fig_trace.pdf
 fig_multicell.pdf
 fig_repair.pdf
 
-# third-party review material, not part of the manuscript
-revisionideas/
 
 # submission package: the zip and PDF are derivable from the tagged source
 submission/*.zip
 submission/*.pdf
+
+# Manuscript. This repository is the reproducibility artifact for the paper
+# (code, data, scripts). The paper itself is not published here.
+main.tex
+main.pdf
+numbers.tex
+tab_*.tex
+fig_*.pdf
+references.bib
+IEEEabrv.bib
+IEEEtran.cls
+IEEEtran.bst
+submission/

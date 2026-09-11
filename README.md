@@ -7,16 +7,20 @@ actuated, repairing inadmissible candidates rather than discarding them.
 Accompanies a manuscript submitted to *IEEE Transactions on Network and Service
 Management*. Sole author: Liang Dong, Baylor University.
 
-This repository contains the manuscript, the simulator, and everything needed
-to regenerate every number, table, and figure in the paper. No value quoted in
-the manuscript is typed by hand: `sim/journal/make_numbers.py` emits
-`numbers.tex`, `tab_headline.tex`, and `tab_loo.tex` from the result CSVs, and
-the paper reads only those.
+This repository contains the simulator and the aggregated results behind every
+number, table, and figure in the paper. No value quoted in the paper is typed by
+hand: `sim/journal/make_numbers.py` regenerates the LaTeX macros and tables from
+the result CSVs, and the manuscript reads only those.
 
 ## What is and is not in this repository
 
-Included: the manuscript source and PDF, the simulator used for every result,
-and the aggregated result files the numbers are generated from.
+Included: the simulator used for every result, the aggregated result files, and
+the scripts that turn them into the paper's numbers, tables, and figures.
+
+Not included: the manuscript source and PDF. The paper is under review and is
+not published here. `make_numbers.py` still regenerates `numbers.tex` and the
+table fragments, and prints the full block of consistency checks, so every
+claim the paper makes can be verified against the code without it.
 
 Not included, and to be fetched separately:
 
@@ -36,23 +40,22 @@ same predicate set the shield enforced, that this work exists to correct.
 ## Layout
 
 ```
-main.tex                 manuscript (IEEEtran, journal class)
-references.bib           bibliography
-numbers.tex              GENERATED -- every numeric claim in the paper
-tab_headline.tex         GENERATED -- Table III (headline results)
-tab_loo.tex              GENERATED -- Table IV (predicate ablation)
-fig_*.pdf                GENERATED -- figures copied from sim/journal/figs/
+build.sh                 regenerate figures, numbers and tables; run the checks
+numbers.tex              GENERATED (gitignored) -- every numeric claim
+tab_*.tex                GENERATED (gitignored) -- the paper's tables
+fig_*.pdf                GENERATED (gitignored) -- the paper's figures
 
 sim/journal/             journal-edition simulator (this paper)
   core.py                network model, latent hazard oracle H, predicate sets,
                          perception-aware digital twin
-  shield.py              shield, repair operator, all eight controllers
+  shield.py              shield, repair operator, all eleven controllers
   adversary.py           benign / overt / adaptive (Kerckhoffs) planners
   conditional.py         estimator of r_bar(o,a) = E[reward | o, a]
   experiments.py         main sweeps E1-E6
   theory.py              Theorem 1 verification and its sweeps
   calibration.py         perception-aware twin calibration study
-  multicell.py           cluster-coupled predicates, Algorithm 3
+  multicell.py           cluster-coupled predicates (not used by the paper)
+  frontier.py            risk--PDR frontier: threshold tuning vs. Phi+
   llm_planner.py         local LLM planner + prompt-injection experiment
   repair_stats.py        what the repair operator actually edits
   stats_j.py             bootstrap CIs, Wilcoxon + Holm, Cliff's delta
@@ -60,7 +63,6 @@ sim/journal/             journal-edition simulator (this paper)
   figures.py             all figures
   make_numbers.py        CSV -> LaTeX macros, with consistency checks
 
-sim/src/                 earlier conference-draft simulator, kept for reference
 sim/data/                RadioML 2016.10A (not redistributed here)
 sim/models/              local LLM weights (not redistributed here)
 ```
@@ -81,8 +83,8 @@ python3 theory.py --seeds 10 --cycles 300
 # 3. perception-aware twin calibration                (~3 min, CPU)
 python3 calibration.py --seeds 10 --cycles 300
 
-# 4. cluster-coupled policy, C = 3..19                (~10 min, CPU)
-python3 multicell.py --seeds 15 --cycles 300
+# 4. risk--PDR frontier: conservative ceilings vs. Phi+ (~15 min, CPU)
+python3 frontier.py --seeds 30 --cycles 300
 
 # 5. repair-edit statistics                           (~5 min, CPU)
 python3 repair_stats.py --seeds 30 --cycles 300
@@ -97,14 +99,18 @@ python3 timing.py
 python3 llm_planner.py --cycles 60 --seeds 0 1 2 \
         --scenarios narrowband wideband compound
 
-# 9. figures, LaTeX macros, consistency checks, and the PDF
+# 9. figures, LaTeX macros, and the consistency checks
 cd ../.. && ./build.sh
 ```
 
+`build.sh` skips the LaTeX step when `main.tex` is absent, which it is here.
+
 `make_numbers.py` prints a block of consistency checks at the end. Every one
-must read `OK`; they assert the qualitative claims the prose makes (that the
-repaired shield has the highest mean PDR, that the bound is non-vacuous, that
-the shielded controllers record exactly zero policy violations, and so on).
+must read `OK`; they assert the qualitative claims the paper makes (that repair
+is the best zero-violation planner-driven controller, that the structured search
+attains the highest PDR and the worst hazard rate at once, that threshold tuning
+saturates above `Phi+`, that the bound is non-vacuous, that the shielded
+controllers record exactly zero policy violations, and so on).
 
 ## What is measured, and what it means
 
@@ -124,8 +130,8 @@ paper's main point.
   amplifier above its thermal limit, sustained priority starvation. No
   controller can see `H`. This is the number that matters operationally.
 
-Against the adaptive (Kerckhoffs) adversary, which knows the predicate schema
-and therefore proposes only `Phi`-admissible actions, the first column is exactly
+Against the adaptive (Kerckhoffs) adversary, which holds the deployed predicate
+set and therefore proposes only `Phi`-admissible actions, the first column is exactly
 zero while the second is not. That gap is the paper's central result.
 
 ## Data and models
@@ -133,7 +139,7 @@ zero while the second is not. That gap is the paper's central result.
 * Interference perception is trained on DeepSig **RadioML 2016.10A**, which
   must be downloaded separately into `sim/data/`. The trained classifier's
   validation confusion matrix is checked in at
-  `sim/results/perception_radioml.json`, so every experiment except retraining
+  `sim/journal/results/perception_radioml.json`, so every experiment except retraining
   the classifier runs without the raw dataset.
 * The LLM experiment uses a local **Qwen2.5-1.5B-Instruct** checkout in
   `sim/models/`. Weights are not redistributed here. Nothing leaves the
@@ -142,5 +148,5 @@ zero while the second is not. That gap is the paper's central result.
 ## Requirements
 
 Python 3.12 with `numpy`, `pandas`, `scipy`, `matplotlib`; `torch` and
-`transformers` for the classifier and the LLM planner; TeX Live with
-`IEEEtran`, `algorithmicx`, `subfig`, `booktabs`.
+`transformers` for the classifier and the LLM planner. TeX Live is needed only
+to typeset the manuscript, which is not distributed here.
