@@ -243,6 +243,40 @@ class ShieldFilterController(BaseController):
                         n_admitted=len(adm))
 
 
+class StructuredSearchController(BaseController):
+    """Non-LLM baseline that exploits the reward model's dominance structure.
+
+    Under the PDR objective four of the seven components are weakly dominated
+    whenever the uncertainty veto is inactive: the lowest MCS maximises margin
+    at no modelled rate cost, the urgent slice carries the largest priority
+    multiplier, local placement is never worse than cloud, and delivery rises
+    with power, so the admissible maximum is taken.  What is left to search is
+    waveform x beam x route, which is 36 actions here rather than |A|.
+
+    This is the baseline a reviewer should demand before accepting that a
+    language model is needed to propose cross-layer recovery actions: it needs
+    no planner, scores 36 twin queries, and is still shielded.
+    """
+    name = "structured"
+
+    def __init__(self, planner=None, phi=PHI_BASE, **kw):
+        super().__init__(planner, phi)
+        import core as _c
+        best_m = min(_c.MCS_REQ_DB, key=_c.MCS_REQ_DB.get)
+        pw = max(p for p in _c.POWERS if p <= _c.P_MAX_POLICY)
+        self._grid = [Action(waveform=w, mod_code=best_m, beam=b, route=r,
+                             slice_="urgent", workload="local", power_dbm=pw)
+                      for w in _c.WAVEFORMS for b in _c.BEAMS
+                      for r in _c.ROUTES]
+
+    def step(self, o, twin):
+        pool = [a for a in self._grid if admissible(o, a, self.phi)]
+        pool.append(SAFE_FALLBACK.copy())
+        best = max(pool, key=lambda a: twin(o, a)[0])
+        return Decision(best, "admit", n_candidates=len(self._grid),
+                        n_admitted=len(pool) - 1)
+
+
 class ShieldFilterFallbackController(BaseController):
     """Filter-only, but with the signed fallback ALWAYS in the pool.
 
@@ -405,6 +439,7 @@ CONTROLLERS = {
     "llm_only": LLMOnlyController,
     "lagrangian_rl": LagrangianRLController,
     "simplex_rta": SimplexRTAController,
+    "structured": StructuredSearchController,
     "shield_filter": ShieldFilterController,
     "shield_filter_fb": ShieldFilterFallbackController,
     "shield_repair": ShieldRepairController,
@@ -420,6 +455,7 @@ CONTROLLER_LABEL = {
     "llm_only": "LLM-only",
     "lagrangian_rl": "Lagrangian-RL",
     "simplex_rta": "Reactive-RTA",
+    "structured": "Structured search",
     "shield_filter": "Shield (filter)",
     "shield_filter_fb": "Shield (filter+fallback)",
     "shield_repair": "Shield (repair)"}

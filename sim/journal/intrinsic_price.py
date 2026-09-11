@@ -52,7 +52,21 @@ def main(seeds: int = 10, cycles: int = 300) -> None:
         rows.append(dict(scenario=sc, delta_phi=float(np.mean(deltas)),
                          delta_phi_p95=float(np.quantile(deltas, 0.95)),
                          n=len(deltas)))
-    out = {"per_scenario": rows,
+    # Does the maximizing action actually agree across the latent states an
+    # observation leaves open?  Round 2 asserted that it does; it does not.
+    same = diff = 0
+    for sc in core.SCENARIO_ORDER:
+        model = cond.get(sc, conf)
+        for w in model.weights.values():
+            if len(w) < 2:
+                continue
+            am = {int(np.argmax(cond._pdr_vector(model.protos[lk]))) for lk in w}
+            if len(am) == 1:
+                same += 1
+            else:
+                diff += 1
+    out = {"argmax_same": same, "argmax_differs": diff,
+           "per_scenario": rows,
            "mean_delta_phi": float(np.mean([r["delta_phi"] for r in rows])),
            "posterior_entropy_bits": float(np.mean(ent_all)),
            "posterior_entropy_max": float(np.max(ent_all))}

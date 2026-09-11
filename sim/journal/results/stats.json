@@ -171,6 +171,25 @@
           0.13999999999999996
         ],
         "recovery": 2.3
+      },
+      "structured": {
+        "n": 30,
+        "pdr": [
+          0.960929123164684,
+          0.9602491428377654,
+          0.9616093268957768
+        ],
+        "violation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hazard": [
+          0.9566666666666668,
+          0.9566666666666668,
+          0.9566666666666668
+        ],
+        "recovery": 1.0
       }
     },
     "bursty": {
@@ -344,6 +363,25 @@
           0.0006666666666666601
         ],
         "recovery": 11.833333333333334
+      },
+      "structured": {
+        "n": 30,
+        "pdr": [
+          0.9934411627256511,
+          0.993439583514981,
+          0.9934428552302927
+        ],
+        "violation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hazard": [
+          0.9566666666666668,
+          0.9566666666666668,
+          0.9566666666666668
+        ],
+        "recovery": 1.0
       }
     },
     "compound": {
@@ -517,6 +555,25 @@
           0.8427777777777778
         ],
         "recovery": 170.13333333333333
+      },
+      "structured": {
+        "n": 30,
+        "pdr": [
+          0.9639674335675651,
+          0.9633738847084357,
+          0.9645669047087545
+        ],
+        "violation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hazard": [
+          0.9566666666666668,
+          0.9566666666666668,
+          0.9566666666666668
+        ],
+        "recovery": 1.1
       }
     },
     "compromised_xapp": {
@@ -690,6 +747,25 @@
           0.0
         ],
         "recovery": 37.733333333333334
+      },
+      "structured": {
+        "n": 30,
+        "pdr": [
+          0.9934348142795483,
+          0.9934337111560025,
+          0.9934359327446851
+        ],
+        "violation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hazard": [
+          0.9566666666666668,
+          0.9566666666666668,
+          0.9566666666666668
+        ],
+        "recovery": 1.0
       }
     },
     "narrowband": {
@@ -863,6 +939,25 @@
           0.75
         ],
         "recovery": 221.0
+      },
+      "structured": {
+        "n": 30,
+        "pdr": [
+          0.9810318001995177,
+          0.9806436766661653,
+          0.9814006901728899
+        ],
+        "violation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hazard": [
+          0.9566666666666668,
+          0.9566666666666668,
+          0.9566666666666668
+        ],
+        "recovery": 1.0666666666666667
       }
     },
     "wideband": {
@@ -1036,6 +1131,25 @@
           0.75
         ],
         "recovery": 221.0
+      },
+      "structured": {
+        "n": 30,
+        "pdr": [
+          0.9491635915599005,
+          0.9476135771464945,
+          0.9507332554252382
+        ],
+        "violation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hazard": [
+          0.9566666666666668,
+          0.9566666666666668,
+          0.9566666666666668
+        ],
+        "recovery": 1.6666666666666667
       }
     }
   },
@@ -1081,7 +1195,7 @@
         "cliffs_delta": 0.3221604938271605,
         "wilcoxon_W": 200.0,
         "p_raw": 7.47296333572233e-30,
-        "p_holm": 2.989185334288932e-29
+        "p_holm": 3.7364816678611647e-29
       },
       {
         "metric": "mean_pdr",
@@ -1095,7 +1209,7 @@
         "cliffs_delta": 0.4319753086419753,
         "wilcoxon_W": 0.0,
         "p_raw": 2.7348870910495993e-31,
-        "p_holm": 2.1879096728396794e-30
+        "p_holm": 2.4613983819446394e-30
       },
       {
         "metric": "mean_pdr",
@@ -1109,7 +1223,7 @@
         "cliffs_delta": 0.34055555555555556,
         "wilcoxon_W": 9.0,
         "p_raw": 3.1793659857627297e-31,
-        "p_holm": 2.1879096728396794e-30
+        "p_holm": 2.4613983819446394e-30
       },
       {
         "metric": "mean_pdr",
@@ -1123,7 +1237,7 @@
         "cliffs_delta": 0.33654320987654324,
         "wilcoxon_W": 19.0,
         "p_raw": 3.757723705314009e-31,
-        "p_holm": 2.1879096728396794e-30
+        "p_holm": 2.4613983819446394e-30
       },
       {
         "metric": "mean_pdr",
@@ -1151,7 +1265,21 @@
         "cliffs_delta": 0.9637037037037037,
         "wilcoxon_W": 0.0,
         "p_raw": 2.7348870910495993e-31,
-        "p_holm": 2.1879096728396794e-30
+        "p_holm": 2.4613983819446394e-30
+      },
+      {
+        "metric": "mean_pdr",
+        "reference": "shield_repair",
+        "other": "structured",
+        "n_pairs": 180,
+        "mean_ref": 0.9492826179746058,
+        "mean_other": 0.9736613209161444,
+        "mean_diff": -0.024378702941538728,
+        "direction": "other_higher",
+        "cliffs_delta": -0.28641975308641976,
+        "wilcoxon_W": 2587.0,
+        "p_raw": 2.029419720262602e-15,
+        "p_holm": 8.117678881050409e-15
       }
     ],
     "hazard_rate": [
@@ -1167,7 +1295,7 @@
         "cliffs_delta": -0.8110802469135803,
         "wilcoxon_W": 0.0,
         "p_raw": 2.730894730019755e-31,
-        "p_holm": 2.1744803383196983e-30
+        "p_holm": 2.4462903806096606e-30
       },
       {
         "metric": "hazard_rate",
@@ -1181,7 +1309,7 @@
         "cliffs_delta": 0.7362962962962963,
         "wilcoxon_W": 0.0,
         "p_raw": 2.718100422899623e-31,
-        "p_holm": 2.1744803383196983e-30
+        "p_holm": 2.4462903806096606e-30
       },
       {
         "metric": "hazard_rate",
@@ -1195,7 +1323,7 @@
         "cliffs_delta": -0.880895061728395,
         "wilcoxon_W": 0.0,
         "p_raw": 2.7289481328531097e-31,
-        "p_holm": 2.1744803383196983e-30
+        "p_holm": 2.4462903806096606e-30
       },
       {
         "metric": "hazard_rate",
@@ -1209,7 +1337,7 @@
         "cliffs_delta": -0.5077160493827161,
         "wilcoxon_W": 3.0,
         "p_raw": 2.8677919552805096e-31,
-        "p_holm": 2.1744803383196983e-30
+        "p_holm": 2.4462903806096606e-30
       },
       {
         "metric": "hazard_rate",
@@ -1266,6 +1394,20 @@
         "wilcoxon_W": 3249.5,
         "p_raw": 2.6852987686668055e-12,
         "p_holm": 5.370597537333611e-12
+      },
+      {
+        "metric": "hazard_rate",
+        "reference": "shield_repair",
+        "other": "structured",
+        "n_pairs": 180,
+        "mean_ref": 0.15466666666666662,
+        "mean_other": 0.9566666666666668,
+        "mean_diff": -0.802,
+        "direction": "other_higher",
+        "cliffs_delta": -1.0,
+        "wilcoxon_W": 0.0,
+        "p_raw": 2.718904270904214e-31,
+        "p_holm": 2.4462903806096606e-30
       }
     ]
   },
@@ -1322,9 +1464,9 @@
     {
       "predicate_set": "phi_plus",
       "controller": "greedy_twin",
-      "mean_pdr": 0.9593683281,
-      "violation_rate_phi": 0.9097407407,
-      "hazard_rate": 0.4433148148
+      "mean_pdr": 0.9199190484,
+      "violation_rate_phi": 0.0,
+      "hazard_rate": 0.0145185185
     },
     {
       "predicate_set": "phi_plus",
@@ -1336,23 +1478,23 @@
     {
       "predicate_set": "phi_plus",
       "controller": "lagrangian_rl",
-      "mean_pdr": 0.8907367681,
-      "violation_rate_phi": 0.8755,
-      "hazard_rate": 0.4744074074
+      "mean_pdr": 0.9053668002,
+      "violation_rate_phi": 0.0,
+      "hazard_rate": 0.0156481481
     },
     {
       "predicate_set": "phi_plus",
       "controller": "llm_only",
-      "mean_pdr": 0.950213489,
-      "violation_rate_phi": 0.8782962963,
-      "hazard_rate": 0.3542037037
+      "mean_pdr": 0.9187276964,
+      "violation_rate_phi": 0.0,
+      "hazard_rate": 0.0139074074
     },
     {
       "predicate_set": "phi_plus",
       "controller": "shield_filter",
-      "mean_pdr": 0.6330274672,
+      "mean_pdr": 0.9199190484,
       "violation_rate_phi": 0.0,
-      "hazard_rate": 0.0015740741
+      "hazard_rate": 0.0145185185
     },
     {
       "predicate_set": "phi_plus",
@@ -1364,9 +1506,9 @@
     {
       "predicate_set": "phi_plus",
       "controller": "simplex_rta",
-      "mean_pdr": 0.9373332721,
-      "violation_rate_phi": 0.2693888889,
-      "hazard_rate": 0.0466111111
+      "mean_pdr": 0.9199190484,
+      "violation_rate_phi": 0.0,
+      "hazard_rate": 0.0145185185
     }
   ]
 }

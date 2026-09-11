@@ -216,6 +216,15 @@ if llm_p.exists():
     put("InjActUnshielded", pct(gl.loc[(True, "unshielded"), "violation_rate_phi"]))
     put("InjHazUnshielded", pct(gl.loc[(True, "unshielded"), "hazard_rate"]))
     put("BenignHazUnshielded", pct(gl.loc[(False, "unshielded"), "hazard_rate"]))
+    put("InjCandFull", pct(gl.loc[(True, "unshielded"),
+                                  "injection_compliance_full"]))
+    put("BenignCandFull", pct(gl.loc[(False, "unshielded"),
+                                     "injection_compliance_full"]))
+    put("BenignActUnshielded", pct(gl.loc[(False, "unshielded"),
+                                          "violation_rate_phi"]))
+    put("InjHazShielded", pct(gl.loc[(True, "shield_repair"), "hazard_rate"]))
+    put("PDRLLMUnshieldBenign", num(gl.loc[(False, "unshielded"), "mean_pdr"]))
+    put("PDRLLMShieldBenign", num(gl.loc[(False, "shield_repair"), "mean_pdr"]))
     put("InjCandShielded", pct(gl.loc[(True, "shield_repair"), "injection_compliance"]))
     put("PDRLLMShield", num(gl.loc[(True, "shield_repair"), "mean_pdr"]))
     put("PDRLLMUnshield", num(gl.loc[(True, "unshielded"), "mean_pdr"]))
@@ -236,7 +245,9 @@ if llm_p.exists():
                 - _rs.loc["rep_distinct_per_cycle", "count"])
     put("AliasLoss", f"{_lost:,}".replace(",", "{,}"))
 else:
-    for k in ("InjCandRate", "BenignCandRate", "InjActUnshielded",
+    for k in ("InjCandRate", "BenignCandRate", "InjCandFull", "BenignCandFull",
+              "BenignActUnshielded", "InjHazShielded", "PDRLLMUnshieldBenign",
+              "PDRLLMShieldBenign", "InjActUnshielded",
               "InjHazUnshielded", "BenignHazUnshielded", "InjCandShielded",
               "PDRLLMShield", "PDRLLMUnshield",
               "MalformedRate", "LLMLatency", "LLMScenarios", "LLMSeeds",
@@ -244,7 +255,7 @@ else:
         put(k, "n/a")
 
 # --- perception classifier -------------------------------------------------
-pj = json.loads((HERE.parent / "results" / "perception_radioml.json").read_text())
+pj = json.loads((RESULTS / "perception_radioml.json").read_text())
 acc = max(h["val_acc"] for h in pj["info"]["history"])
 put("ClassifierAcc", pct(acc, 2))
 put("WBasNB", pct(pj["perception_confusion"]["wideband"]["narrowband"], 1))
@@ -355,12 +366,37 @@ else:
 
 # --- consistency checks on claims made in the prose -----------------------
 checks = []
+# The structured baseline: a non-LLM controller that exploits the dominance
+# structure of the PDR objective.  It is the sharpest statement of the paper's
+# negative result, so both halves of it are asserted.
+if "structured" in g.mean_pdr.mean().index:
+    _st_pdr = float(g.mean_pdr.mean()["structured"])
+    _st_haz = float(g.hazard_rate.mean()["structured"])
+    _st_vio = float(MAIN[MAIN.controller == "structured"].violation_rate_phi.max())
+    put("PDRStructured", num(_st_pdr))
+    put("HazStructured", num(_st_haz))
+    put("StructuredGrid", "36")
+    checks.append(("the structured baseline has the highest PDR of any controller",
+                   _st_pdr == g.mean_pdr.mean().max(), num(_st_pdr)))
+    checks.append(("the structured baseline emits zero policy violations",
+                   _st_vio == 0.0, "0.000"))
+    checks.append(("the structured baseline is the MOST hazardous controller",
+                   _st_haz == g.hazard_rate.mean().max(), num(_st_haz)))
+else:
+    for _k in ("PDRStructured", "HazStructured", "StructuredGrid"):
+        put(_k, "n/a")
 _ip_p = RESULTS / "intrinsic_price.json"
 if _ip_p.exists():
     _ip = json.loads(_ip_p.read_text())
     put("DeltaPhi", f"{_ip['mean_delta_phi']:.4f}")
     put("PostEntropy", f"{_ip['posterior_entropy_bits']:.2f}")
     put("PostEntropyMax", f"{_ip['posterior_entropy_max']:.1f}")
+    _d, _sm = _ip.get("argmax_differs", 0), _ip.get("argmax_same", 0)
+    put("ArgmaxDiffer", f"{_d} of {_d + _sm}")
+    # Round 2 claimed the maximizer is common across the states a key leaves
+    # open.  It is not; the VALUE of the information is what is negligible.
+    checks.append(("the optimal action is NOT common across latent states",
+                   _d > 0, f"{_d} of {_d + _sm} multi-state keys differ"))
     # The constraint itself is nearly free; the shield's measured price is
     # therefore mechanism (finite pool, imperfect ranking), not the constraint.
     checks.append(("the intrinsic price of the constraint is under 0.01",
@@ -398,17 +434,12 @@ _lp = _ad.pivot_table(index="controller", columns="predicate_set",
                       values="hazard_rate")
 put("HazLagrPhi", num(_lp.loc["lagrangian_rl", "phi"]))
 put("HazLagrPhiPlus", num(_lp.loc["lagrangian_rl", "phi_plus"]))
-checks.append(("Phi+ leaves the unshielded controllers untouched",
-               abs(_lp.loc["greedy_twin", "phi"] - _lp.loc["greedy_twin", "phi_plus"]) < 1e-9
-               and abs(_lp.loc["llm_only", "phi"] - _lp.loc["llm_only", "phi_plus"]) < 1e-9,
-               "identical to the digit"))
-# Lagrangian-RL trains on the violation indicator, so Phi+ reaches it -- but
-# only as a nudge, an order of magnitude smaller than the shift the shielded
-# controllers get.  This is a HYPOTHESIS about the data, not an invariant.
-_dl = abs(_lp.loc["lagrangian_rl", "phi_plus"] - _lp.loc["lagrangian_rl", "phi"])
-_ds = abs(_lp.loc["shield_repair", "phi_plus"] - _lp.loc["shield_repair", "phi"])
-checks.append(("Phi+ moves Lagrangian-RL far less than it moves the shield",
-               _dl < 0.1 * _ds, f"{_dl:.3f} vs {_ds:.3f}"))
+# The adaptive adversary is adapted to the set the SHIELD enforces, so only
+# controllers that apply an admission test are compared across Phi and Phi+.
+checks.append(("Phi+ cuts the shielded hazard rate by more than an order of magnitude",
+               _lp.loc["shield_repair", "phi_plus"] * 10 < _lp.loc["shield_repair", "phi"],
+               f"{_lp.loc['shield_repair','phi']:.3f} -> {_lp.loc['shield_repair','phi_plus']:.3f}"))
+
 # Proposition 3 says repair can only enlarge the admitted pool, so the coverage
 # deficit and the measured gap must fall in EVERY scenario, not just on average.
 # Figure 5 shows them per scenario, so a single reversal would contradict it.

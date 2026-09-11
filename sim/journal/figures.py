@@ -202,8 +202,13 @@ def fig_frontier(master: pd.DataFrame):
 def fig_coverage_gap(master: pd.DataFrame):
     d = master[(master.planner == "adaptive") & (master.perception == "radioml")]
     hz = list(HAZ_LABEL)
-    ctrls = ["heuristic", "greedy_twin", "lagrangian_rl", "simplex_rta",
-             "shield_filter", "shield_repair"]
+    # Only controllers that APPLY an admission test belong here.  The adaptive
+    # adversary restricts itself to admissible candidates because a shield
+    # would reject anything else; against a victim that applies no test it
+    # would simply attack directly, which is the overt adversary already
+    # reported.  Including unshielded controllers here would credit them with
+    # safety supplied by the attacker's own restraint.
+    ctrls = ["heuristic", "simplex_rta", "shield_filter", "shield_repair"]
     fig, axes = plt.subplots(1, 2, figsize=(COL2, 1.85), sharey=True)
     for ax, ps, title in zip(axes, ["phi", "phi_plus"],
                              [r"deployed set $\Phi$ (6 predicates)",
@@ -582,7 +587,7 @@ def fig_trace(scenario: str = "compound", seed: int = 3, cycles: int = 300):
 # ---------------------------------------------------------------------------
 
 def fig_confusion():
-    p = HERE.parent / "results" / "perception_radioml.json"
+    p = RESULTS / "perception_radioml.json"
     d = json.loads(p.read_text())
     classes = d["classes"]
     M = np.array([[d["perception_confusion"][t][pr] for pr in classes]

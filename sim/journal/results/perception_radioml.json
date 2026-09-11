@@ -1,0 +1,279 @@
+{
+  "source": "radioml",
+  "meta": {
+    "raw_keys": [
+      "8PSK@0",
+      "8PSK@10",
+      "8PSK@12",
+      "8PSK@14",
+      "8PSK@16",
+      "8PSK@18",
+      "8PSK@2",
+      "8PSK@4",
+      "8PSK@6",
+      "8PSK@8",
+      "AM-DSB@0",
+      "AM-DSB@10",
+      "AM-DSB@12",
+      "AM-DSB@14",
+      "AM-DSB@16",
+      "AM-DSB@18",
+      "AM-DSB@2",
+      "AM-DSB@4",
+      "AM-DSB@6",
+      "AM-DSB@8",
+      "AM-SSB@0",
+      "AM-SSB@10",
+      "AM-SSB@12",
+      "AM-SSB@14",
+      "AM-SSB@16",
+      "AM-SSB@18",
+      "AM-SSB@2",
+      "AM-SSB@4",
+      "AM-SSB@6",
+      "AM-SSB@8",
+      "BPSK@0",
+      "BPSK@10",
+      "BPSK@12",
+      "BPSK@14",
+      "BPSK@16",
+      "BPSK@18",
+      "BPSK@2",
+      "BPSK@4",
+      "BPSK@6",
+      "BPSK@8",
+      "CPFSK@0",
+      "CPFSK@10",
+      "CPFSK@12",
+      "CPFSK@14",
+      "CPFSK@16",
+      "CPFSK@18",
+      "CPFSK@2",
+      "CPFSK@4",
+      "CPFSK@6",
+      "CPFSK@8",
+      "GFSK@0",
+      "GFSK@10",
+      "GFSK@12",
+      "GFSK@14",
+      "GFSK@16",
+      "GFSK@18",
+      "GFSK@2",
+      "GFSK@4",
+      "GFSK@6",
+      "GFSK@8",
+      "PAM4@0",
+      "PAM4@10",
+      "PAM4@12",
+      "PAM4@14",
+      "PAM4@16",
+      "PAM4@18",
+      "PAM4@2",
+      "PAM4@4",
+      "PAM4@6",
+      "PAM4@8",
+      "QAM16@0",
+      "QAM16@10",
+      "QAM16@12",
+      "QAM16@14",
+      "QAM16@16",
+      "QAM16@18",
+      "QAM16@2",
+      "QAM16@4",
+      "QAM16@6",
+      "QAM16@8",
+      "QAM64@0",
+      "QAM64@10",
+      "QAM64@12",
+      "QAM64@14",
+      "QAM64@16",
+      "QAM64@18",
+      "QAM64@2",
+      "QAM64@4",
+      "QAM64@6",
+      "QAM64@8",
+      "QPSK@0",
+      "QPSK@10",
+      "QPSK@12",
+      "QPSK@14",
+      "QPSK@16",
+      "QPSK@18",
+      "QPSK@2",
+      "QPSK@4",
+      "QPSK@6",
+      "QPSK@8",
+      "WBFM@0",
+      "WBFM@10",
+      "WBFM@12",
+      "WBFM@14",
+      "WBFM@16",
+      "WBFM@18",
+      "WBFM@2",
+      "WBFM@4",
+      "WBFM@6",
+      "WBFM@8"
+    ],
+    "class_counts": {
+      "none": 4000,
+      "narrowband": 4000,
+      "wideband": 4000,
+      "bursty": 4000
+    },
+    "source": "data/RML2016.10a_dict_optimized.pkl"
+  },
+  "classes": [
+    "none",
+    "narrowband",
+    "wideband",
+    "bursty"
+  ],
+  "confusion_counts": [
+    [
+      591,
+      3,
+      24,
+      187
+    ],
+    [
+      1,
+      781,
+      3,
+      2
+    ],
+    [
+      82,
+      307,
+      382,
+      18
+    ],
+    [
+      21,
+      10,
+      12,
+      776
+    ]
+  ],
+  "perception_confusion": {
+    "none": {
+      "none": 0.7341614906832298,
+      "narrowband": 0.0037267080745341614,
+      "wideband": 0.02981366459627329,
+      "bursty": 0.23229813664596274
+    },
+    "narrowband": {
+      "none": 0.0012706480304955528,
+      "narrowband": 0.9923761118170267,
+      "wideband": 0.0038119440914866584,
+      "bursty": 0.0025412960609911056
+    },
+    "wideband": {
+      "none": 0.10392902408111533,
+      "narrowband": 0.38910012674271227,
+      "wideband": 0.4841571609632446,
+      "bursty": 0.022813688212927757
+    },
+    "bursty": {
+      "none": 0.02564102564102564,
+      "narrowband": 0.01221001221001221,
+      "wideband": 0.014652014652014652,
+      "bursty": 0.9474969474969475
+    }
+  },
+  "info": {
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 1.1803880214691163,
+        "val_loss": 5.452994003295898,
+        "val_acc": 0.2559375
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.7177668523788452,
+        "val_loss": 3.472910089492798,
+        "val_acc": 0.26625
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.6402929091453552,
+        "val_loss": 0.6601152610778809,
+        "val_acc": 0.67625
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.5770785146951676,
+        "val_loss": 0.6777345609664917,
+        "val_acc": 0.71375
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.5307055354118347,
+        "val_loss": 0.5292692804336547,
+        "val_acc": 0.7571875
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.4888706123828888,
+        "val_loss": 0.5585539746284485,
+        "val_acc": 0.748125
+      },
+      {
+        "epoch": 7,
+        "train_loss": 0.4849299830198288,
+        "val_loss": 0.5100181412696838,
+        "val_acc": 0.7846875
+      },
+      {
+        "epoch": 8,
+        "train_loss": 0.46730480194091795,
+        "val_loss": 0.47667455673217773,
+        "val_acc": 0.7903125
+      },
+      {
+        "epoch": 9,
+        "train_loss": 0.4589966452121735,
+        "val_loss": 0.516753900051117,
+        "val_acc": 0.7790625
+      },
+      {
+        "epoch": 10,
+        "train_loss": 0.4336505615711212,
+        "val_loss": 0.47790447473526,
+        "val_acc": 0.79125
+      },
+      {
+        "epoch": 11,
+        "train_loss": 0.43632075846195223,
+        "val_loss": 0.4758258104324341,
+        "val_acc": 0.7903125
+      },
+      {
+        "epoch": 12,
+        "train_loss": 0.42322841942310335,
+        "val_loss": 0.5035690903663635,
+        "val_acc": 0.77625
+      },
+      {
+        "epoch": 13,
+        "train_loss": 0.40984642922878267,
+        "val_loss": 0.511996648311615,
+        "val_acc": 0.784375
+      },
+      {
+        "epoch": 14,
+        "train_loss": 0.39225938022136686,
+        "val_loss": 0.43511855840682984,
+        "val_acc": 0.8053125
+      },
+      {
+        "epoch": 15,
+        "train_loss": 0.38531572222709654,
+        "val_loss": 0.4781950879096985,
+        "val_acc": 0.790625
+      }
+    ],
+    "n_train": 12800,
+    "n_val": 3200,
+    "val_accuracy": 0.790625
+  }
+}

@@ -43,14 +43,17 @@ HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "results"
 RESULTS.mkdir(exist_ok=True, parents=True)
 
-CONF_PATH = HERE.parent / "results" / "perception_radioml.json"
+CONF_PATH = RESULTS / "perception_radioml.json"   # published with the code
+_LEGACY_CONF = HERE.parent / "results" / "perception_radioml.json"
 
 
 def load_confusion(kind: str) -> dict | None:
     """kind in {perfect, radioml}."""
     if kind == "perfect":
         return None
-    p = CONF_PATH if kind == "radioml" else HERE.parent / "results" / f"perception_{kind}.json"
+    p = CONF_PATH if kind == "radioml" else RESULTS / f"perception_{kind}.json"
+    if not p.exists() and kind == "radioml" and _LEGACY_CONF.exists():
+        p = _LEGACY_CONF
     if not p.exists():
         raise FileNotFoundError(p)
     return json.loads(p.read_text())["perception_confusion"]
@@ -106,7 +109,13 @@ def run_episode(scenario: str, controller: str, seed: int,
 
     twin = Twin(twin_params or TwinParams(), rng=np.random.default_rng(seed + 9973),
                 seed=seed, confusion=confusion)
-    planner = PLANNERS[planner_kind](rng, k=k)
+    if planner_kind == "adaptive":
+        # A Kerckhoffs adversary knows the deployed bundle.  Handing it
+        # PHI_BASE while evaluating Phi+ would measure only how well Phi+
+        # blocks an attack designed against Phi.
+        planner = PLANNERS[planner_kind](rng, k=k, phi=phi)
+    else:
+        planner = PLANNERS[planner_kind](rng, k=k)
 
     ctrl = CONTROLLERS[controller](planner=planner, phi=phi)
     ctrl.reset(rng)
@@ -191,9 +200,9 @@ def run_episode(scenario: str, controller: str, seed: int,
 
 # ---------------------------------------------------------------------------
 
-MAIN_CONTROLLERS = ["static", "heuristic", "greedy_twin", "llm_only",
-                    "lagrangian_rl", "simplex_rta", "shield_filter",
-                    "shield_filter_fb", "shield_repair"]
+MAIN_CONTROLLERS = ["static", "heuristic", "structured", "greedy_twin",
+                    "llm_only", "lagrangian_rl", "simplex_rta",
+                    "shield_filter", "shield_filter_fb", "shield_repair"]
 
 
 def _one(job):

@@ -1,4 +1,6 @@
 {
+  "argmax_same": 22,
+  "argmax_differs": 45,
   "per_scenario": [
     {
       "scenario": "narrowband",
