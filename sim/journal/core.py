@@ -90,7 +90,11 @@ MCS_RATE = {  # relative spectral efficiency, used for the goodput term
 
 # Policy constants (signed operator policy bundle).
 W_LOCKED = ("dsss",)          # waveform locked out by spectrum policy
-P_MAX_POLICY = 30.0           # static policy power ceiling  [dBm]
+# The signed bundle's ceiling.  Overridable so the risk--PDR frontier of
+# Section V can sweep the operator's own threshold without touching the
+# environment; the sweep fans out over processes that import `core` fresh.
+P_MAX_POLICY = float(os.environ.get("SHIELD_P_MAX_POLICY", "30.0"))
+P_MAX_REG = 30.0              # TRUE regulatory cap, no incumbent present [dBm]
 P_MAX_HW = 36.0               # hardware ceiling             [dBm]
 P_NOMINAL = 23.0              # nominal operating power      [dBm]
 R_BLOCKLIST = ("mesh_b",)     # statically known unauthenticated relay
@@ -593,7 +597,7 @@ def hazards(st: LatentState, a: Action) -> list[str]:
     out = []
     if a.waveform in W_LOCKED:
         out.append("h_rf")
-    cap = P_MAX_INCUMBENT if st.incumbent_active else P_MAX_POLICY
+    cap = P_MAX_INCUMBENT if st.incumbent_active else P_MAX_REG
     if a.power_dbm > cap:
         out.append("h_pwr")
     if a.route in st.compromised_routes:

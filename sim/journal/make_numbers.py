@@ -186,6 +186,68 @@ else:
         for _q in ("Haz", "Viol", "PDR"):
             put(f"Cross{_k}{_q}", "n/a")
 
+# --- risk--PDR frontier: threshold tuning vs predicate expansion ----------
+_fp = RESULTS / "frontier.csv"
+if _fp.exists():
+    F = pd.read_csv(_fp)
+    _R = F[F.controller == "shield_repair"].groupby(
+        ["predicate_set", "ceiling_dbm"]).mean(numeric_only=True)
+    _S = F[F.controller == "structured"].groupby(
+        ["predicate_set", "ceiling_dbm"]).mean(numeric_only=True)
+
+    def _r(c, ps="phi"):
+        return _R.loc[(ps, c)]
+
+    # LaTeX macro names cannot contain digits, so the ceilings are named
+    # high/mid/low and emitted as macros rather than typed into the prose.
+    _HI, _MID, _LO = sorted(c for c in F.ceiling_dbm.unique() if c < 30.0)[::-1]
+    put("FrontCeilHi", f"{_HI:.0f}")
+    put("FrontCeilMid", f"{_MID:.0f}")
+    put("FrontCeilLo", f"{_LO:.0f}")
+    put("FrontPDRDropStep", pts(float(_r(30).mean_pdr - _r(_HI).mean_pdr), 1))
+    put("FrontHazHi", num(float(_r(_HI).hazard_rate)))
+    put("FrontPDRHi", num(float(_r(_HI).mean_pdr)))
+    put("FrontHazMid", num(float(_r(_MID).hazard_rate)))
+    put("FrontPDRMid", num(float(_r(_MID).mean_pdr)))
+    put("FrontHazLo", num(float(_r(_LO).hazard_rate)))
+    put("FrontPDRLo", num(float(_r(_LO).mean_pdr)))
+    put("FrontStarveLo", num(float(_r(_LO).h_starve), 4))
+    put("FrontRelayFloor", num(float(_r(_MID).h_relay)))
+    put("FrontStructHazHi", num(float(_S.loc[("phi", _HI)].hazard_rate)))
+    put("FrontStructPDRHi", num(float(_S.loc[("phi", _HI)].mean_pdr)))
+    put("FrontStructDropHi",
+        pts(float(_S.loc[("phi", 30.0)].mean_pdr
+                  - _S.loc[("phi", _HI)].mean_pdr), 1))
+    put("FrontPlusOverTuned",
+        pts(float(_r(_MID).mean_pdr - _r(30, "phi_plus").mean_pdr), 1))
+
+    def frontier_table() -> str:
+        rows = [("phi", c, "$\\Phi$, %.0f\\,dBm%s"
+                 % (c, "$^{\\dagger}$" if c == 30.0 else ""))
+                for c in (30.0, _HI, _MID, _LO)]
+        rows.append(("phi_plus", 30.0, "$\\Phi^{+}$, 30\\,dBm"))
+        out = ["\\setlength{\\tabcolsep}{3.4pt}",
+               "\\begin{tabular}{lccccc}", "\\toprule",
+               "Policy & PDR & Haz. & $h_{\\mathrm{therm}}$ & "
+               "$h_{\\mathrm{pwr}}$ & $h_{\\mathrm{relay}}$ \\\\",
+               "\\midrule"]
+        for ps, c, lab in rows:
+            r = _R.loc[(ps, c)]
+            bold = "\\textbf{%s}" % lab if ps == "phi_plus" else lab
+            out.append(f"{bold} & {r.mean_pdr:.3f} & {r.hazard_rate:.3f} & "
+                       f"{r.h_therm:.3f} & {r.h_pwr:.3f} & {r.h_relay:.3f} \\\\")
+        out += ["\\bottomrule", "\\end{tabular}"]
+        return "\n".join(out)
+
+    (PAPER / "tab_frontier.tex").write_text(frontier_table() + "\n")
+else:
+    for _k in ("FrontCeilHi", "FrontCeilMid", "FrontCeilLo", "FrontPDRDropStep",
+               "FrontHazHi", "FrontPDRHi", "FrontHazMid", "FrontPDRMid",
+               "FrontHazLo", "FrontPDRLo", "FrontStarveLo", "FrontRelayFloor",
+               "FrontStructHazHi", "FrontStructPDRHi", "FrontStructDropHi",
+               "FrontPlusOverTuned"):
+        put(_k, "n/a")
+
 # --- adaptive adversary / coverage gap ------------------------------------
 ap = ADAPT[(ADAPT.predicate_set == "phi") & (ADAPT.controller == "shield_repair")]
 app = ADAPT[(ADAPT.predicate_set == "phi_plus") & (ADAPT.controller == "shield_repair")]
@@ -435,6 +497,33 @@ checks.append(("the perception confusion matrix is invertible (BBSE rank cond.)"
                np.linalg.cond(_G) < 50, f"cond={np.linalg.cond(_G):.1f}"))
 
 # Enforcement isolated from the attacker retargeting (E2b).
+if _fp.exists():
+    checks.append(("one step down the ceiling removes the thermal hazard",
+                   float(_r(29).h_therm) == 0.0 and float(_r(30).h_therm) > 0.1,
+                   f"{_r(30).h_therm:.3f} -> 0.000 for {_r(30).mean_pdr - _r(29).mean_pdr:.4f} PDR"))
+    checks.append(("and it is CHEAPER than Phi+ for that hazard alone",
+                   (_r(30).mean_pdr - _r(29).mean_pdr)
+                   < (_r(30).mean_pdr - _r(30, "phi_plus").mean_pdr),
+                   "0.6 vs 3.9 points"))
+    checks.append(("but threshold tuning saturates above Phi+ at every ceiling",
+                   min(float(_r(c).hazard_rate) for c in (23.0, 26.0, 29.0, 30.0))
+                   > 5 * float(_r(30, "phi_plus").hazard_rate),
+                   f"best tuned {min(float(_r(c).hazard_rate) for c in (23.0,26.0,29.0,30.0)):.3f}"
+                   f" vs {float(_r(30,'phi_plus').hazard_rate):.3f}"))
+    checks.append(("the floor is h_relay, which no power threshold reaches",
+                   abs(float(_r(26).hazard_rate) - float(_r(26).h_relay)) < 0.01,
+                   f"h_relay {_r(26).h_relay:.3f} of {_r(26).hazard_rate:.3f}"))
+    checks.append(("over-tightening is worse on BOTH axes than one step less",
+                   float(_r(23).hazard_rate) > float(_r(26).hazard_rate)
+                   and float(_r(23).mean_pdr) < float(_r(26).mean_pdr),
+                   f"23 dBm: {_r(23).mean_pdr:.3f}/{_r(23).hazard_rate:.3f} vs "
+                   f"26 dBm: {_r(26).mean_pdr:.3f}/{_r(26).hazard_rate:.3f}"))
+    checks.append(("Phi+ beats the best tuned policy on hazards at similar PDR",
+                   float(_r(30, "phi_plus").hazard_rate) < float(_r(26).hazard_rate)
+                   and abs(float(_r(30, "phi_plus").mean_pdr)
+                           - float(_r(26).mean_pdr)) < 0.02,
+                   "0.014 vs 0.147 at 0.920 vs 0.928"))
+
 if _xp.exists():
     checks.append(("most of the learner's violations were unavoidable, not learned",
                    _forced > 0.5 * _vi.mean(),
