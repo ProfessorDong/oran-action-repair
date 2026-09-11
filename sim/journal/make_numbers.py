@@ -28,10 +28,11 @@ SC_ORDER = ["narrowband", "wideband", "bursty", "backhaul",
 SC_TEX = {"narrowband": "Narrowband", "wideband": "Wideband",
           "bursty": "Bursty", "backhaul": "Backhaul",
           "compromised_xapp": "Comp.\\ xApp", "compound": "Compound"}
-CT_ORDER = ["static", "heuristic", "greedy_twin", "llm_only",
+CT_ORDER = ["static", "heuristic", "structured", "greedy_twin", "llm_only",
             "lagrangian_rl", "simplex_rta", "shield_filter", "shield_repair"]
 CT_TEX = {"static": "Static", "heuristic": "Heuristic",
-          "greedy_twin": "Greedy-Twin", "llm_only": "LLM-only",
+          "structured": "Struct.", "greedy_twin": "Greedy-Twin",
+          "llm_only": "LLM-only",
           "lagrangian_rl": "Lagr.-RL", "simplex_rta": "React-RTA",
           "shield_filter": "Shield(filt.)",
           "shield_repair": "\\textbf{Shield(rep.)}"}
@@ -118,7 +119,7 @@ for c, p in zip(others, adj):
     key = {"shield_filter": "Filter", "heuristic": "Heur",
            "greedy_twin": "Greedy", "llm_only": "LLMOnly",
            "lagrangian_rl": "Lagr", "simplex_rta": "Simplex",
-           "static": "Static"}[c]
+           "structured": "Struct", "static": "Static"}[c]
     put(f"Cliff{key}", f"{cliffs(a, b):+.2f}")
     put(f"Diff{key}", f"{(a - b).mean():+.3f}")
     put(f"Gap{key}", f"{abs((a - b).mean()):.3f}")
@@ -127,6 +128,29 @@ for c, p in zip(others, adj):
     put(f"PVal{key}", ("<10^{-6}" if p < 1e-6 else
                        f"<10^{{{int(np.ceil(np.log10(p)))}}}" if p < 0.01 else
                        f"={p:.2f}"))
+
+# --- enforcement isolated from the attacker's own retargeting -------------
+# In E2 the Kerckhoffs attacker retargets into whatever the defender enforces,
+# so under Phi+ it sanitises its own proposals and EVERY controller inherits the
+# reduction.  E2b pins the attacker to Phi and varies only the enforced set, so
+# the proposal stream is identical to the E2 "phi" arm.
+_xp = RESULTS / "adaptive_crossed.csv"
+if _xp.exists():
+    X = pd.read_csv(_xp).groupby("controller").mean(numeric_only=True)
+    _E2 = master[(master.planner == "adaptive")
+                 & (master.predicate_set == "phi")].groupby("controller").mean(
+                     numeric_only=True)
+    for _c, _k in (("greedy_twin", "Unshield"), ("lagrangian_rl", "Lagr"),
+                   ("simplex_rta", "RTA"), ("shield_filter", "Filter"),
+                   ("shield_repair", "Repair")):
+        put(f"Cross{_k}Haz", num(X.loc[_c, "hazard_rate"]))
+        put(f"Cross{_k}Viol", pct(X.loc[_c, "violation_rate_phi"], 1))
+        put(f"Cross{_k}PDR", num(X.loc[_c, "mean_pdr"]))
+    # Held-fixed proposals: the unshielded optimiser does not move.
+else:
+    for _k in ("Unshield", "Lagr", "RTA", "Filter", "Repair"):
+        for _q in ("Haz", "Viol", "PDR"):
+            put(f"Cross{_k}{_q}", "n/a")
 
 # --- adaptive adversary / coverage gap ------------------------------------
 ap = ADAPT[(ADAPT.predicate_set == "phi") & (ADAPT.controller == "shield_repair")]
@@ -258,6 +282,13 @@ else:
 pj = json.loads((RESULTS / "perception_radioml.json").read_text())
 acc = max(h["val_acc"] for h in pj["info"]["history"])
 put("ClassifierAcc", pct(acc, 2))
+import conditional as _cond
+put("StrengthBucket", f"{_cond.STRENGTH_BUCKET:.2f}")
+# BBSE identifies the prior only if Gamma is invertible; report its conditioning
+# rather than asserting identifiability.
+_G = np.array([[pj["perception_confusion"][t][pr] for pr in _CLS]
+               for t in _CLS]) if (_CLS := list(pj["perception_confusion"])) else None
+put("GammaCond", f"{np.linalg.cond(_G):.1f}")
 put("WBasNB", pct(pj["perception_confusion"]["wideband"]["narrowband"], 1))
 
 # --- timing ----------------------------------------------------------------
@@ -366,6 +397,38 @@ else:
 
 # --- consistency checks on claims made in the prose -----------------------
 checks = []
+checks.append(("the perception confusion matrix is invertible (BBSE rank cond.)",
+               np.linalg.cond(_G) < 50, f"cond={np.linalg.cond(_G):.1f}"))
+
+# Enforcement isolated from the attacker retargeting (E2b).
+if _xp.exists():
+    checks.append(("with the attacker pinned to Phi, the unshielded hazard rate "
+                   "is unmoved by Phi+",
+                   abs(float(X.loc["greedy_twin", "hazard_rate"])
+                       - float(_E2.loc["greedy_twin", "hazard_rate"])) < 1e-6,
+                   num(X.loc["greedy_twin", "hazard_rate"])))
+    # A learner trained on the Phi+ indicator still violates Phi+ heavily.
+    checks.append(("the learner given the Phi+ indicator still violates it",
+                   float(X.loc["lagrangian_rl", "violation_rate_phi"]) > 0.5,
+                   pct(X.loc["lagrangian_rl", "violation_rate_phi"], 1)))
+    # The same predicates enforced at admission do not.
+    checks.append(("the same predicates enforced at admission violate zero",
+                   float(X.loc["shield_repair", "violation_rate_phi"]) == 0.0
+                   and float(X.loc["shield_filter", "violation_rate_phi"]) == 0.0,
+                   "0.000"))
+    # Enforcement, not the attacker, is what lowers the hazard here.
+    checks.append(("admission cuts the hazard rate an order of magnitude below "
+                   "the learner on the SAME proposals",
+                   float(X.loc["lagrangian_rl", "hazard_rate"])
+                   > 10 * float(X.loc["shield_repair", "hazard_rate"]),
+                   f'{X.loc["lagrangian_rl","hazard_rate"]:.3f} vs '
+                   f'{X.loc["shield_repair","hazard_rate"]:.3f}'))
+    # Rejection is not a substitute for repair under attack.
+    checks.append(("filtering pays for that safety in throughput, repair does not",
+                   float(X.loc["shield_repair", "mean_pdr"])
+                   - float(X.loc["shield_filter", "mean_pdr"]) > 0.2,
+                   num(X.loc["shield_repair", "mean_pdr"] - X.loc["shield_filter", "mean_pdr"])))
+
 # The structured baseline: a non-LLM controller that exploits the dominance
 # structure of the PDR objective.  It is the sharpest statement of the paper's
 # negative result, so both halves of it are asserted.
@@ -380,6 +443,24 @@ if "structured" in g.mean_pdr.mean().index:
                    _st_pdr == g.mean_pdr.mean().max(), num(_st_pdr)))
     checks.append(("the structured baseline emits zero policy violations",
                    _st_vio == 0.0, "0.000"))
+    # The 0.957 is not a surprise once the thermal model is written down: at a
+    # constant 30 dBm the first-order recurrence crosses the threshold at a
+    # fixed cycle and stays above it.  Predict it from the constants and assert
+    # the simulator agrees, so a change to either is caught here.
+    import core as _c
+    _T, _n_cross = _c.T_AMBIENT_C, None
+    _cyc = int(MAIN[MAIN.controller == "structured"].cycles.iloc[0])
+    for _n in range(1, _cyc + 1):
+        _T += 0.55 * max(0.0, 30.0 - _c.P_NOMINAL) - 0.18 * (_T - _c.T_AMBIENT_C)
+        if _T > _c.T_MAX_C:
+            _n_cross = _n
+            break
+    _pred = (_cyc - _n_cross + 1) / _cyc
+    put("ThermCross", str(_n_cross))
+    put("ThermPredicted", num(_pred))
+    checks.append(("h_therm at the ceiling matches the analytic prediction",
+                   abs(float(g.h_therm.mean()["structured"]) - _pred) < 5e-4,
+                   f"{_pred:.4f} predicted, crossing at cycle {_n_cross}"))
     checks.append(("the structured baseline is the MOST hazardous controller",
                    _st_haz == g.hazard_rate.mean().max(), num(_st_haz)))
 else:
@@ -480,11 +561,34 @@ else:
               "RegretNaiveTwin", "RegretAwareTwin", "CalibGain"):
         put(k, "n/a")
 
-zero_viol = [c for c in CT_ORDER
+# Over EVERY controller, not a subset.  A narrow version of this check once
+# let a false "highest PDR of any compliant controller" claim through.
+_all_ct = list(g.mean_pdr.mean().index)
+zero_viol = [c for c in _all_ct
              if MAIN[MAIN.controller == c].violation_rate_phi.max() == 0.0]
 best_safe = g.mean_pdr.mean()[zero_viol].idxmax()
-checks.append(("SHIELD(repair) is the best zero-violation controller",
-               best_safe == "shield_repair", best_safe))
+checks.append(("the best zero-violation controller on PDR is structured search",
+               best_safe == "structured", best_safe))
+# What the paper may claim: among PLANNER-DRIVEN controllers -- those that take
+# an untrusted proposal stream -- repair is the best zero-violation one.
+_planner_driven = [c for c in zero_viol if c not in ("static", "heuristic",
+                                                     "structured")]
+_best_pd = g.mean_pdr.mean()[_planner_driven].idxmax()
+checks.append(("repair is the best zero-violation PLANNER-DRIVEN controller",
+               _best_pd == "shield_repair", _best_pd))
+# Neither structured search nor repair dominates the other: the first is higher
+# on PDR, the second lower on hazards.  State the trade-off, do not rank it.
+put("PDRStructOverRepair",
+    pts(float(g.mean_pdr.mean()["structured"]
+              - g.mean_pdr.mean()["shield_repair"]), 1))
+put("HazStructOverRepair",
+    pts(float(g.hazard_rate.mean()["structured"]
+              - g.hazard_rate.mean()["shield_repair"]), 1))
+checks.append(("structured search and repair do not dominate each other",
+               (g.mean_pdr.mean()["structured"] > g.mean_pdr.mean()["shield_repair"])
+               and (g.hazard_rate.mean()["structured"]
+                    > g.hazard_rate.mean()["shield_repair"]),
+               "PDR up, hazards up"))
 _gap = float(g.mean_pdr.mean()["greedy_twin"] - g.mean_pdr.mean()["shield_repair"])
 put("ShieldPriceP", num(_gap, 4))
 put("ShieldPrice", pts(_gap, 1))

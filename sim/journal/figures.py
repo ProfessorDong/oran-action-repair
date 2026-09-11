@@ -282,9 +282,9 @@ def fig_theorem():
             ax.annotate(f"{v:.2f}", xy=(xi - w / 2, TOP), xytext=(0, 1.5),
                         textcoords="offset points", ha="center", va="bottom",
                         fontsize=5.4, fontweight="bold", clip_on=False)
-    ax.legend(frameon=False, fontsize=5.9, loc="upper right", handlelength=1.0,
+        ax.legend(frameon=False, fontsize=5.9, loc="upper right", handlelength=1.0,
               handletextpad=0.35, labelspacing=0.25, borderpad=0.15,
-              bbox_to_anchor=(1.02, 1.02))
+              bbox_to_anchor=(0.86, 1.02))
     _grid(ax)
 
     # (b) twin-mismatch sweep
@@ -298,7 +298,13 @@ def fig_theorem():
     ax.set_xlabel("twin structural mismatch $m$")
     ax.set_title("(b) twin quality", fontsize=7.4)
     ax.set_yscale("log")
-    ax.legend(frameon=False, fontsize=6.4, loc="center right")
+    # Open a strip under the lowest curve so the legend sits below the data
+    # rather than across it.
+    lo, hi = ax.get_ylim()
+    ax.set_ylim(lo * 0.42, hi)
+    ax.legend(frameon=False, fontsize=6.1, loc="lower center", ncol=3,
+              handlelength=1.2, handletextpad=0.3, columnspacing=0.9,
+              borderpad=0.1, borderaxespad=0.25)
     _grid(ax, "both")
 
     # (c) candidate-budget sweep
@@ -453,7 +459,11 @@ def fig_multicell():
         _grid(ax)
     lo = float(d.groupby(["scheme", "scenario"]).mean_pdr.mean().min())
     axes[1].set_ylim(max(0.0, lo - 0.03), 1.0)
-    axes[0].legend(frameon=False, fontsize=6.3, loc="upper left")
+    # Headroom so the legend sits above every bar instead of across the first two.
+    axes[0].set_ylim(0, 1.16)
+    axes[0].legend(frameon=False, fontsize=6.0, loc="upper left", ncol=2,
+                   handlelength=1.1, handletextpad=0.35, columnspacing=0.8,
+                   labelspacing=0.25, borderpad=0.1, borderaxespad=0.2)
 
     ax = axes[2]
     for sch in order:
@@ -463,7 +473,9 @@ def fig_multicell():
     ax.set_ylabel("mean PDR")
     ax.set_title("(c) cluster size", fontsize=7.4)
     _grid(ax, "both")
-    ax.legend(frameon=False, fontsize=6.3, loc="lower left")
+    ax.legend(frameon=False, fontsize=6.3, loc="lower right",
+              handlelength=1.2, handletextpad=0.35, labelspacing=0.25,
+              borderpad=0.1, borderaxespad=0.3)
     fig.tight_layout()
     _save(fig, "fig_multicell")
 

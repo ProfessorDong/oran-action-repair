@@ -92,6 +92,7 @@ class EpisodeSummary:
 def run_episode(scenario: str, controller: str, seed: int,
                 planner_kind: str = "naive", predicate_set: str = "phi",
                 eval_predicate_set: str | None = None,
+                atk_predicate_set: str | None = None,
                 perception: str = "radioml", cycles: int = 300, k: int = 5,
                 twin_params: TwinParams | None = None,
                 confusion: dict | None = "auto",
@@ -110,10 +111,15 @@ def run_episode(scenario: str, controller: str, seed: int,
     twin = Twin(twin_params or TwinParams(), rng=np.random.default_rng(seed + 9973),
                 seed=seed, confusion=confusion)
     if planner_kind == "adaptive":
-        # A Kerckhoffs adversary knows the deployed bundle.  Handing it
-        # PHI_BASE while evaluating Phi+ would measure only how well Phi+
-        # blocks an attack designed against Phi.
-        planner = PLANNERS[planner_kind](rng, k=k, phi=phi)
+        # A Kerckhoffs adversary knows the deployed bundle, so by default it
+        # targets whatever the defender enforces.  That is the right threat
+        # model, but it confounds two effects: an attacker that retargets into
+        # A_{Phi+} sanitises its own proposals, and then EVERY controller that
+        # draws from that pool inherits the reduction, shielded or not.  Set
+        # `atk_predicate_set` to hold the attacker's target fixed while the
+        # defender's enforced set varies; that isolates enforcement.
+        phi_atk = PREDICATE_SETS[atk_predicate_set or predicate_set]
+        planner = PLANNERS[planner_kind](rng, k=k, phi=phi_atk)
     else:
         planner = PLANNERS[planner_kind](rng, k=k)
 
@@ -207,27 +213,32 @@ MAIN_CONTROLLERS = ["static", "heuristic", "structured", "greedy_twin",
 
 def _one(job):
     """Worker: one episode.  Module-level so it is picklable."""
-    perc, pl, ps, sc, ct, sd, cycles, tp, tag = job
+    perc, pl, ps, sc, ct, sd, cycles, tp, tag, atk = job
     r = run_episode(sc, ct, sd, planner_kind=pl, predicate_set=ps,
+                    atk_predicate_set=atk,
                     perception=perc, cycles=cycles, twin_params=tp,
                     confusion=load_confusion(perc))
     d = asdict(r)
     if tag is not None:
         d["twin"] = tag
+    if atk is not None:
+        d["atk_predicate_set"] = atk
     return d
 
 
 def sweep(seeds, scenarios, controllers, planners, predicate_sets,
           perceptions, cycles, verbose=True,
           twin_params: TwinParams | None = None,
-          tag: str | None = None, workers: int | None = None) -> pd.DataFrame:
+          tag: str | None = None, workers: int | None = None,
+          atk_predicate_set: str | None = None) -> pd.DataFrame:
     """Run the cross product of conditions, one episode per task.
 
     Episodes are independent, so the sweep is embarrassingly parallel; we fan
     out over processes because the inner loop is pure Python and the GIL would
     otherwise serialise it.
     """
-    combos = [(perc, pl, ps, sc, ct, sd, cycles, twin_params, tag)
+    combos = [(perc, pl, ps, sc, ct, sd, cycles, twin_params, tag,
+               atk_predicate_set)
               for perc, pl, ps, sc, ct, sd in
               itertools.product(perceptions, planners, predicate_sets,
                                 scenarios, controllers, seeds)]
@@ -266,6 +277,22 @@ def main():
                          "shield_filter", "shield_repair"],
                         ["adaptive"], ["phi", "phi_plus"], ["radioml"],
                         args.cycles))
+
+    # (E2b) Enforcement isolated from the attacker's own retargeting.  The
+    # attacker's target is pinned to Phi while the defender enforces Phi+, so
+    # the proposal stream is identical to the E2 "phi" arm and the only thing
+    # that varies is what the controller does with it.
+    print("[E2b] crossed: attacker targets Phi, defender enforces Phi+ ...",
+          flush=True)
+    crossed = sweep(seeds, SCENARIO_ORDER,
+                    ["greedy_twin", "lagrangian_rl", "simplex_rta",
+                     "shield_filter", "shield_repair"],
+                    ["adaptive"], ["phi_plus"], ["radioml"], args.cycles,
+                    atk_predicate_set="phi")
+    crossed.to_csv(RESULTS / "adaptive_crossed.csv", index=False)
+    print(crossed.groupby("controller")[["mean_pdr", "hazard_rate",
+                                         "violation_rate_phi"]]
+          .mean().round(4).to_string())
 
     # (E3) Overt adversary against Phi+ (does augmentation cost throughput?).
     print("[E3] overt adversary against Phi+ ...", flush=True)
