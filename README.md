@@ -4,8 +4,9 @@ Provably sound agentic control for self-healing Open RAN: an untrusted planner
 proposes cross-layer recovery actions and a deterministic shield decides what is
 actuated, repairing inadmissible candidates rather than discarding them.
 
-Accompanies a manuscript submitted to *IEEE Transactions on Network and Service
-Management*. Sole author: Liang Dong, Baylor University.
+Accompanies a manuscript under review at *IEEE Transactions on Network and
+Service Management* (submitted September 2026). Sole author: Liang Dong, Baylor
+University.
 
 This repository contains the simulator and the aggregated results behind every
 number, table, and figure in the paper. No value quoted in the paper is typed by
