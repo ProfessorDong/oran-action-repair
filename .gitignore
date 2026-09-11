@@ -66,3 +66,7 @@ fig_repair.pdf
 
 # third-party review material, not part of the manuscript
 revisionideas/
+
+# submission package: the zip and PDF are derivable from the tagged source
+submission/*.zip
+submission/*.pdf
